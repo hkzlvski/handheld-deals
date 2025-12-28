@@ -1,0 +1,44 @@
+---
+interface Props {
+  activeDeals: number;
+  newVerified: number;
+  potentialSavings: number;
+}
+
+const { activeDeals, newVerified, potentialSavings } = Astro.props;
+---
+
+<div class="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 backdrop-blur-sm">
+  <h2 class="text-sm font-semibold text-zinc-400 mb-4 uppercase tracking-wide">
+    🎯 Active Missions
+  </h2>
+  
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <!-- Active Deals -->
+    <div class="stat-badge mission-active">
+      <span class="text-2xl">⚡</span>
+      <div>
+        <div class="text-2xl font-bold">{activeDeals}</div>
+        <div class="text-xs text-zinc-500">Deals Expiring Today</div>
+      </div>
+    </div>
+
+    <!-- New Verified -->
+    <div class="stat-badge">
+      <span class="text-2xl">✓</span>
+      <div>
+        <div class="text-2xl font-bold text-green-400">{newVerified}</div>
+        <div class="text-xs text-zinc-500">Just Verified</div>
+      </div>
+    </div>
+
+    <!-- Potential Savings -->
+    <div class="stat-badge">
+      <span class="text-2xl">💰</span>
+      <div>
+        <div class="text-2xl font-bold text-deck-orange">${potentialSavings}</div>
+        <div class="text-xs text-zinc-500">Potential Savings</div>
+      </div>
+    </div>
+  </div>
+</div>

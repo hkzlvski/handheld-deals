@@ -1,20 +1,130 @@
 ---
-import Layout from '../layouts/Layout.astro';
+import Layout from "../layouts/Layout.astro";
+import MissionStats from "../components/MissionStats.astro";
+import GameCard from "../components/GameCard.astro";
+import DealOfTheDay from "../components/DealOfTheDay.astro";
+
+import {
+  getDealOfTheDay,
+  getDeckVerifiedDeals,
+  getBatterySaverDeals,
+  getTopDiscountDeals,
+  getMissionStats,
+} from "../lib/api";
+
+// Fetch all data
+const [dealOfDay, verifiedDeals, batterySavers, topDiscounts, missionStats] =
+  await Promise.all([
+    getDealOfTheDay(),
+    getDeckVerifiedDeals(12),
+    getBatterySaverDeals(12),
+    getTopDiscountDeals(12),
+    getMissionStats(),
+  ]);
+
+// DEBUG: Check what we got
+console.log("🔍 Deal of Day:", {
+  title: dealOfDay?.game_id?.title,
+  price: dealOfDay?.price,
+  discount: dealOfDay?.discount_percent,
+});
 ---
 
 <Layout title="Handheld Deals - Best Gaming Deals">
-  <main class="flex-1 container mx-auto px-4 py-16">
-    <h1 class="text-5xl font-bold mb-4">🎮 Handheld Deals</h1>
-    <p class="text-xl text-zinc-400 mb-8">
-      Find the best deals for Steam Deck, ROG Ally, and handheld gaming PCs
-    </p>
-    
-    <div class="card">
-      <h2 class="text-2xl font-bold mb-2">Welcome!</h2>
-      <p class="text-zinc-400 mb-4">
-        Your one-stop shop for handheld gaming deals with verified compatibility.
-      </p>
-      <button class="btn btn-primary">Browse Deals</button>
-    </div>
+  <main class="flex-1">
+    <!-- Hero Section -->
+    <section
+      class="bg-gradient-to-b from-zinc-900 to-zinc-950 border-b border-zinc-800"
+    >
+      <div class="container mx-auto px-4 py-16">
+        <h1 class="text-5xl md:text-6xl font-bold mb-4">🎮 Handheld Deals</h1>
+        <p class="text-xl text-zinc-400 mb-8 max-w-2xl">
+          Find the best game deals for Steam Deck, ROG Ally, and handheld gaming
+          PCs with verified compatibility.
+        </p>
+
+        <!-- Mission Stats -->
+        <MissionStats
+          activeDeals={missionStats.activeDeals}
+          newVerified={missionStats.newVerified}
+          potentialSavings={missionStats.potentialSavings}
+        />
+      </div>
+    </section>
+
+    <!-- Deal of the Day -->
+    {
+      dealOfDay && dealOfDay.game_id && (
+        <section class="container mx-auto px-4 py-8">
+          <DealOfTheDay deal={dealOfDay} />
+        </section>
+      )
+    }
+
+    <!-- Deck Verified Deals -->
+    <section class="container mx-auto px-4 py-12">
+      <h2 class="text-3xl font-bold mb-6">🎮 Featured Deals</h2>
+      <div
+        class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4"
+      >
+        {
+          verifiedDeals.map(
+            (deal: any) =>
+              deal.game_id && (
+                <GameCard
+                  game={deal.game_id}
+                  showDeal={true}
+                  dealDiscount={deal.discount_percent}
+                  dealPrice={deal.price}
+                />
+              ),
+          )
+        }
+      </div>
+    </section>
+
+    <!-- Battery Savers -->
+    {
+      batterySavers.length > 0 && (
+        <section class="container mx-auto px-4 py-12">
+          <h2 class="text-3xl font-bold mb-6">🔋 Battery Savers</h2>
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            {batterySavers.map(
+              (deal: any) =>
+                deal.game_id && (
+                  <GameCard
+                    game={deal.game_id}
+                    showDeal={true}
+                    dealDiscount={deal.discount_percent}
+                    dealPrice={deal.price}
+                  />
+                ),
+            )}
+          </div>
+        </section>
+      )
+    }
+
+    <!-- Top Discounts -->
+    <section class="container mx-auto px-4 py-12">
+      <h2 class="text-3xl font-bold mb-6">💰 Top Discounts (50%+ Off)</h2>
+      <div
+        class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4"
+      >
+        {
+          topDiscounts.map(
+            (deal: any) =>
+              deal.game_id && (
+                <GameCard
+                  game={deal.game_id}
+                  showDeal={true}
+                  dealDiscount={deal.discount_percent}
+                  dealPrice={deal.price}
+                />
+              ),
+          )
+        }
+      </div>
+    </section>
   </main>
 </Layout>

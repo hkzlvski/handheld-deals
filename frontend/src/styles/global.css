@@ -49,3 +49,34 @@
     @apply bg-red-900/50 text-red-400 border border-red-800;
   }
 }
+/* Gaming-inspired rarity badges */
+@layer components {
+  .deal-card {
+    @apply card transition-all duration-300 hover:-translate-y-1;
+  }
+  
+  .deal-card-legendary {
+    @apply border-rarity-legendary shadow-glow-legendary hover:shadow-glow-legendary;
+  }
+  
+  .deal-card-epic {
+    @apply border-rarity-epic shadow-glow-epic hover:shadow-glow-epic;
+  }
+  
+  .deal-card-rare {
+    @apply border-rarity-rare shadow-glow-rare hover:shadow-glow-rare;
+  }
+  
+  .deal-card-common {
+    @apply border-rarity-common shadow-glow-common hover:shadow-glow-common;
+  }
+  
+  /* Mission/Achievement style stats */
+  .stat-badge {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg font-mono text-sm;
+  }
+  
+  .mission-active {
+    @apply border-deck-orange text-deck-orange;
+  }
+}

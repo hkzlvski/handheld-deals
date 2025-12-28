@@ -1,0 +1,95 @@
+---
+interface Props {
+  game: any;
+  showDeal?: boolean;
+  dealDiscount?: number;
+  dealPrice?: number;
+}
+
+const { game, showDeal = false, dealDiscount = 0, dealPrice = 0 } = Astro.props;
+
+// Inline helper function
+function getDeckBadgeColor(status: string): string {
+  const colors: Record<string, string> = {
+    verified: 'badge-verified',
+    playable: 'badge-playable',
+    unsupported: 'badge-unsupported',
+    unknown: 'bg-zinc-800 text-zinc-400',
+  };
+  return colors[status] || colors.unknown;
+}
+
+// Get rarity class based on discount
+function getRarityClass(discount: number): string {
+  if (discount >= 60) return 'deal-card-legendary';
+  if (discount >= 40) return 'deal-card-epic';
+  if (discount >= 20) return 'deal-card-rare';
+  return 'deal-card-common';
+}
+
+const rarityClass = showDeal ? getRarityClass(dealDiscount) : '';
+---
+
+<article class={`deal-card ${rarityClass} group cursor-pointer`}>
+  <!-- Game Cover -->
+  <div class="aspect-[3/4] bg-zinc-800 rounded-lg overflow-hidden mb-3">
+    {game.cover_image_url ? (
+      <img 
+        src={game.cover_image_url} 
+        alt={game.title}
+        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+      />
+    ) : (
+      <div class="w-full h-full flex items-center justify-center text-4xl">
+        🎮
+      </div>
+    )}
+  </div>
+
+  <!-- Game Title -->
+  <h3 class="font-semibold text-zinc-50 mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors">
+    {game.title}
+  </h3>
+
+  <!-- Badges -->
+  <div class="flex flex-wrap gap-2 mb-3">
+    <span class={`badge ${getDeckBadgeColor(game.deck_status)}`}>
+      {game.deck_status === 'verified' && '✓ Verified'}
+      {game.deck_status === 'playable' && '⚠ Playable'}
+      {game.deck_status === 'unsupported' && '✗ Unsupported'}
+      {game.deck_status === 'unknown' && '? Unknown'}
+    </span>
+
+    {game.controller_support === 'full' && (
+      <span class="badge bg-blue-900/50 text-blue-400">
+        🎮 Full Controller
+      </span>
+    )}
+
+    <span class="badge bg-zinc-800 text-zinc-400 font-mono text-xs">
+      🔋 {game.battery_drain}
+    </span>
+  </div>
+
+  <!-- Deal Info -->
+  {showDeal && (
+    <div class="flex items-center justify-between pt-3 border-t border-zinc-800">
+      <span class="text-2xl font-bold text-zinc-50 font-mono">
+        ${Number(dealPrice).toFixed(2)}
+      </span>
+      <span class="text-lg font-bold text-deck-orange font-mono">
+        -{dealDiscount}%
+      </span>
+    </div>
+  )}
+
+  <!-- Stats -->
+  <div class="flex gap-2 text-xs text-zinc-500 mt-2">
+    {game.metacritic_score && (
+      <span>MC: {game.metacritic_score}</span>
+    )}
+    {game.steam_positive_percent && (
+      <span>👍 {game.steam_positive_percent}%</span>
+    )}
+  </div>
+</article>
