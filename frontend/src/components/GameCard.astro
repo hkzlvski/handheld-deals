@@ -103,7 +103,10 @@ const rarityClass = showDeal ? getRarityClass(dealDiscount) : "";
 
       <!-- Battery Life -->
       <span class="badge bg-zinc-800 text-zinc-400 font-mono text-xs">
-        🔋 {game.battery_drain}
+        🔋 {
+          game.battery_drain.charAt(0).toUpperCase() +
+            game.battery_drain.slice(1)
+        }
       </span>
 
       <!-- WARNING: Launcher -->

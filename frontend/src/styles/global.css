@@ -6,11 +6,16 @@
   body {
     @apply bg-zinc-950 text-zinc-100;
   }
-  
-  h1, h2, h3, h4, h5, h6 {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-bold text-zinc-50;
   }
-  
+
   a {
     @apply text-blue-400 hover:text-blue-300 transition-colors;
   }
@@ -20,63 +25,68 @@
   .btn {
     @apply px-4 py-2 rounded-lg font-medium transition-all;
   }
-  
+
   .btn-primary {
     @apply bg-blue-600 hover:bg-blue-700 text-white;
   }
-  
+
   .btn-secondary {
     @apply bg-zinc-800 hover:bg-zinc-700 text-zinc-100;
   }
-  
+
   .card {
     @apply bg-zinc-900 border border-zinc-800 rounded-xl p-6;
   }
-  
+
   .badge {
-    @apply px-2 py-1 text-xs rounded-full font-medium;
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
   }
-  
+
   .badge-verified {
     @apply bg-green-900/50 text-green-400 border border-green-800;
   }
-  
+
   .badge-playable {
     @apply bg-yellow-900/50 text-yellow-400 border border-yellow-800;
   }
-  
+
   .badge-unsupported {
     @apply bg-red-900/50 text-red-400 border border-red-800;
   }
 }
+
 /* Gaming-inspired rarity badges */
 @layer components {
-  .deal-card {
-    @apply card transition-all duration-300 hover:-translate-y-1;
-  }
-  
   .deal-card-legendary {
-    @apply border-rarity-legendary shadow-glow-legendary hover:shadow-glow-legendary;
+    @apply border-rarity-legendary;
+    /* Remove always-on glow, add only on hover: */
   }
-  
+
+  .deal-card-legendary:hover {
+    @apply shadow-glow-legendary;
+  }
+
   .deal-card-epic {
-    @apply border-rarity-epic shadow-glow-epic hover:shadow-glow-epic;
+    @apply border-rarity-epic;
   }
-  
+
+  .deal-card-epic:hover {
+    @apply shadow-glow-epic;
+  }
+
   .deal-card-rare {
-    @apply border-rarity-rare shadow-glow-rare hover:shadow-glow-rare;
+    @apply border-rarity-rare;
   }
-  
+
+  .deal-card-rare:hover {
+    @apply shadow-glow-rare;
+  }
+
   .deal-card-common {
-    @apply border-rarity-common shadow-glow-common hover:shadow-glow-common;
+    @apply border-rarity-common;
   }
-  
-  /* Mission/Achievement style stats */
-  .stat-badge {
-    @apply inline-flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg font-mono text-sm;
-  }
-  
-  .mission-active {
-    @apply border-deck-orange text-deck-orange;
+
+  .deal-card-common:hover {
+    @apply shadow-glow-common;
   }
 }

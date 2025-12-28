@@ -71,16 +71,34 @@ if (whyItWorksPoints.length === 0) {
   class="relative overflow-hidden rounded-xl bg-gradient-to-br from-deck-orange/20 via-zinc-900 to-purple-900/20 border-2 border-deck-orange/50 p-1 max-w-4xl mx-auto"
 >
   <div class="bg-zinc-950 rounded-lg p-4">
-    <div class="flex items-center gap-2 mb-3">
+    <!-- Badges Row with Micro-Signals -->
+    <div class="flex flex-wrap items-center gap-2 mb-3">
       <span
         class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-deck-orange text-zinc-950 rounded-full text-xs font-bold uppercase tracking-wide"
       >
         🔥 Deal of the Day
       </span>
+
       {
         deal.is_historical_low && (
           <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-600 text-white rounded-full text-xs font-bold">
             💎 Historical Low
+          </span>
+        )
+      }
+
+      {
+        deal.is_historical_low && (
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-red-900/50 text-red-400 border border-red-800 rounded-full text-xs">
+            🔥 Lowest in 12 months
+          </span>
+        )
+      }
+
+      {
+        deal.expires_at && (
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-900/50 text-orange-400 border border-orange-800 rounded-full text-xs">
+            ⏱ Expires soon
           </span>
         )
       }
