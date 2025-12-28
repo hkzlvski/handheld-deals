@@ -17,7 +17,6 @@ const {
   isHistoricalLow = false,
 } = Astro.props;
 
-// Inline helper function
 function getDeckBadgeColor(status: string): string {
   const colors: Record<string, string> = {
     verified: "badge-verified",
@@ -28,7 +27,6 @@ function getDeckBadgeColor(status: string): string {
   return colors[status] || colors.unknown;
 }
 
-// Get rarity class based on discount
 function getRarityClass(discount: number): string {
   if (discount >= 60) return "deal-card-legendary";
   if (discount >= 40) return "deal-card-epic";
@@ -41,13 +39,14 @@ const rarityClass = showDeal ? getRarityClass(dealDiscount) : "";
 
 <a
   href={`/game/${game.slug}`}
-  class="block"
+  class="block h-full"
   data-game-id={game.id}
   data-game-slug={game.slug}
   data-tracking="game-card-click"
 >
-  <article class={`deal-card ${rarityClass} group cursor-pointer`}>
-    <!-- Game Cover -->
+  <article
+    class={`deal-card ${rarityClass} group cursor-pointer h-full flex flex-col`}
+  >
     <div
       class="aspect-[3/4] bg-zinc-800 rounded-lg overflow-hidden mb-3 relative"
     >
@@ -64,35 +63,62 @@ const rarityClass = showDeal ? getRarityClass(dealDiscount) : "";
           </div>
         )
       }
-
-      <!-- Historical Low Badge (top-left) -->
       {
         isHistoricalLow && (
-          <div class="absolute top-2 left-2 bg-green-600 text-white px-2 py-1 rounded text-xs font-bold shadow-lg">
+          <div class="absolute top-3 left-3 bg-green-600 text-white px-2.5 py-1 rounded-full text-xs font-bold shadow-lg">
             💎 Historical Low
           </div>
         )
       }
     </div>
 
-    <!-- Game Title -->
     <h3
       class="font-semibold text-zinc-50 mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors"
     >
       {game.title}
     </h3>
 
-    <!-- Badges -->
     <div class="flex flex-wrap gap-2 mb-3">
-      <!-- Deck Status -->
-      <span class={`badge ${getDeckBadgeColor(game.deck_status)}`}>
-        {game.deck_status === "verified" && "✓ Verified"}
-        {game.deck_status === "playable" && "⚠ Playable"}
-        {game.deck_status === "unsupported" && "✗ Unsupported"}
-        {game.deck_status === "unknown" && "? Unknown"}
-      </span>
-
-      <!-- Controller Support -->
+      {
+        game.deck_status === "verified" && (
+          <span class="badge badge-verified">
+            <>
+              <span class="inline md:hidden">✓</span>
+              <span class="hidden md:inline">✓ Verified</span>
+            </>
+          </span>
+        )
+      }
+      {
+        game.deck_status === "playable" && (
+          <span class="badge badge-playable">
+            <>
+              <span class="inline md:hidden">⚠</span>
+              <span class="hidden md:inline">⚠ Playable</span>
+            </>
+          </span>
+        )
+      }
+      {
+        game.deck_status === "unsupported" && (
+          <span class="badge badge-unsupported">
+            <>
+              <span class="inline md:hidden">✗</span>
+              <span class="hidden md:inline">✗ Unsupported</span>
+            </>
+          </span>
+        )
+      }
+      {
+        game.deck_status === "unknown" && (
+          <span class="badge bg-zinc-800 text-zinc-400">
+            <>
+              <span class="inline md:hidden">?</span>
+              <span class="hidden md:inline">? Unknown</span>
+            </>
+          </span>
+        )
+      }
       {
         game.controller_support === "full" && (
           <span class="badge bg-blue-900/50 text-blue-400">
@@ -100,16 +126,12 @@ const rarityClass = showDeal ? getRarityClass(dealDiscount) : "";
           </span>
         )
       }
-
-      <!-- Battery Life -->
-      <span class="badge bg-zinc-800 text-zinc-400 font-mono text-xs">
-        🔋 {
+      <span class="badge bg-zinc-800 text-zinc-400 font-mono text-xs"
+        >🔋 {
           game.battery_drain.charAt(0).toUpperCase() +
             game.battery_drain.slice(1)
-        }
-      </span>
-
-      <!-- WARNING: Launcher -->
+        }</span
+      >
       {
         game.launcher && game.launcher !== "steam" && (
           <span
@@ -120,8 +142,6 @@ const rarityClass = showDeal ? getRarityClass(dealDiscount) : "";
           </span>
         )
       }
-
-      <!-- WARNING: Always Online -->
       {
         game.always_online && (
           <span
@@ -132,8 +152,6 @@ const rarityClass = showDeal ? getRarityClass(dealDiscount) : "";
           </span>
         )
       }
-
-      <!-- WARNING: Small Text -->
       {
         game.small_text_warning && (
           <span
@@ -144,8 +162,6 @@ const rarityClass = showDeal ? getRarityClass(dealDiscount) : "";
           </span>
         )
       }
-
-      <!-- WARNING: Anti-cheat -->
       {
         game.anti_cheat_issues && (
           <span
@@ -158,28 +174,34 @@ const rarityClass = showDeal ? getRarityClass(dealDiscount) : "";
       }
     </div>
 
-    <!-- Deal Info (if showing deal) -->
+    <div class="flex-1"></div>
+
     {
       showDeal && (
-        <div class="pt-3 border-t border-zinc-800 space-y-1">
-          <div class="flex items-center justify-between">
+        <div class="pt-3 border-t border-zinc-800 mt-auto">
+          <div class="flex items-baseline gap-2 mb-2">
             <span class="text-2xl font-bold text-zinc-50 font-mono">
               ${Number(dealPrice).toFixed(2)}
             </span>
-            <span class="text-lg font-bold text-deck-orange font-mono">
-              -{dealDiscount}%
+            <span class="text-sm text-zinc-500 line-through">
+              $
+              {(Number(dealPrice) / (1 - Number(dealDiscount) / 100)).toFixed(
+                2,
+              )}
             </span>
           </div>
-          {dealStore && (
-            <p class="text-xs text-zinc-500">
-              on {dealStore.charAt(0).toUpperCase() + dealStore.slice(1)}
-            </p>
-          )}
+          <div class="flex items-center justify-between">
+            <span class="inline-flex items-center px-2 py-0.5 bg-green-900/50 text-green-400 rounded-full text-xs font-bold">
+              Save {dealDiscount}%
+            </span>
+            {dealStore && (
+              <span class="text-xs text-zinc-400">on {dealStore}</span>
+            )}
+          </div>
         </div>
       )
     }
 
-    <!-- Stats -->
     <div class="flex gap-2 text-xs text-zinc-500 mt-2">
       {game.metacritic_score && <span>MC: {game.metacritic_score}</span>}
       {
