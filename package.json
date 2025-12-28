@@ -11,7 +11,10 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@directus/sdk": "^18.0.3",
+    "axios": "^1.13.2",
     "directus": "^11.14.0",
+    "dotenv": "^17.2.3",
     "pg": "^8.16.3"
   }
 }
