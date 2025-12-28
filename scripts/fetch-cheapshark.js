@@ -348,4 +348,11 @@ async function main() {
   }
 }
 
-main();
+main().then(() => {
+  // Ping healthchecks.io on success
+  const https = require('https');
+  https.get('https://hc-ping.com/3c188a09-0cd6-4c9d-8526-23328327cc78').on('error', () => {});
+}).catch((error) => {
+  console.error('Script failed:', error);
+  process.exit(1);
+});

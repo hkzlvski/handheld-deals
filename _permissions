@@ -1,0 +1,12 @@
+             indexname              |                                                            indexdef                                                            
+------------------------------------+--------------------------------------------------------------------------------------------------------------------------------
+ deals_pkey                         | CREATE UNIQUE INDEX deals_pkey ON public.deals USING btree (id)
+ idx_deals_discount_percent         | CREATE INDEX idx_deals_discount_percent ON public.deals USING btree (discount_percent)
+ idx_deals_expires_at               | CREATE INDEX idx_deals_expires_at ON public.deals USING btree (expires_at)
+ idx_deals_game_id                  | CREATE INDEX idx_deals_game_id ON public.deals USING btree (game_id)
+ idx_deals_game_store_active_unique | CREATE UNIQUE INDEX idx_deals_game_store_active_unique ON public.deals USING btree (game_id, store) WHERE (expires_at IS NULL)
+ idx_deals_last_checked             | CREATE INDEX idx_deals_last_checked ON public.deals USING btree (last_checked)
+ idx_deals_price                    | CREATE INDEX idx_deals_price ON public.deals USING btree (price)
+ idx_deals_store                    | CREATE INDEX idx_deals_store ON public.deals USING btree (store)
+(8 rows)
+

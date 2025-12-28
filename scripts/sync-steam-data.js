@@ -218,4 +218,11 @@ async function syncGames() {
 }
 
 // Run the script
-syncGames();
+syncGames().then(() => {
+  // Ping healthchecks.io on success
+  const https = require('https');
+  https.get('https://hc-ping.com/ca960b43-e3d2-4c62-9b96-0aee9fd8bbf2').on('error', () => {});
+}).catch((error) => {
+  console.error('Script failed:', error);
+  process.exit(1);
+});

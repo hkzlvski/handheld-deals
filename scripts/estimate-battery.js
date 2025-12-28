@@ -200,4 +200,11 @@ async function estimateAll() {
 }
 
 // Run the script
-estimateAll();
+estimateAll().then(() => {
+  // Ping healthchecks.io on success
+  const https = require('https');
+  https.get('https://hc-ping.com/1f79ed82-9a89-445d-9b43-8721fb2291dc').on('error', () => {});
+}).catch((error) => {
+  console.error('Script failed:', error);
+  process.exit(1);
+});
