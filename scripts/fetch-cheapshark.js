@@ -109,6 +109,25 @@ async function checkGameQuality(steamAppId, manualOverride, gameData = null) {
     return { pass: false };
   }
   
+  // Multiplayer-only check (if we have genre data)
+  if (gameData?.genres) {
+    const genres = gameData.genres.toLowerCase();
+    
+    // Check if game is multiplayer-only
+    const hasMultiplayer = genres.includes('multiplayer') || genres.includes('co-op');
+    const hasSinglePlayer = genres.includes('single') || genres.includes('singleplayer') || 
+                           genres.includes('rpg') || genres.includes('adventure') || 
+                           genres.includes('strategy') || genres.includes('simulation') ||
+                           genres.includes('indie') || genres.includes('action') ||
+                           genres.includes('platformer') || genres.includes('puzzle');
+    
+    // If ONLY multiplayer and NO single-player genres, likely multiplayer-only
+    if (hasMultiplayer && !hasSinglePlayer) {
+      logger.warn(`❌ Quality: FAIL (likely multiplayer-only: ${gameData.genres})`);
+      return { pass: false };
+    }
+  }
+  
   // Fetch Steam reviews
   const reviews = await fetchSteamReviews(steamAppId);
   
