@@ -27,7 +27,7 @@ export async function getDeckVerifiedDeals(limit = 12) {
       })
     );
 
-    // TEMPORARY: Show all deals with discount, not just verified
+    // TEMPORARY: Show all deals with discount
     return deals
       .filter((d: any) => d.game_id && d.discount_percent > 0)
       .slice(0, limit);

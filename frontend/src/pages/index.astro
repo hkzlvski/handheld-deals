@@ -3,6 +3,7 @@ import Layout from "../layouts/Layout.astro";
 import MissionStats from "../components/MissionStats.astro";
 import GameCard from "../components/GameCard.astro";
 import DealOfTheDay from "../components/DealOfTheDay.astro";
+import EmptyState from "../components/EmptyState.astro";
 
 import {
   getDealOfTheDay,
@@ -21,13 +22,6 @@ const [dealOfDay, verifiedDeals, batterySavers, topDiscounts, missionStats] =
     getTopDiscountDeals(12),
     getMissionStats(),
   ]);
-
-// DEBUG: Check what we got
-console.log("🔍 Deal of Day:", {
-  title: dealOfDay?.game_id?.title,
-  price: dealOfDay?.price,
-  discount: dealOfDay?.discount_percent,
-});
 ---
 
 <Layout title="Handheld Deals - Best Gaming Deals">
@@ -61,35 +55,21 @@ console.log("🔍 Deal of Day:", {
       )
     }
 
-    <!-- Deck Verified Deals -->
+    <!-- Featured Deals -->
     <section class="container mx-auto px-4 py-12">
-      <h2 class="text-3xl font-bold mb-6">🎮 Featured Deals</h2>
-      <div
-        class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4"
-      >
-        {
-          verifiedDeals.map(
-            (deal: any) =>
-              deal.game_id && (
-                <GameCard
-                  game={deal.game_id}
-                  showDeal={true}
-                  dealDiscount={deal.discount_percent}
-                  dealPrice={deal.price}
-                />
-              ),
-          )
-        }
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-3xl font-bold">🎮 Featured Deals</h2>
+        <a
+          href="/browse?filter=verified"
+          class="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 text-sm font-medium"
+        >
+          View All →
+        </a>
       </div>
-    </section>
-
-    <!-- Battery Savers -->
-    {
-      batterySavers.length > 0 && (
-        <section class="container mx-auto px-4 py-12">
-          <h2 class="text-3xl font-bold mb-6">🔋 Battery Savers</h2>
+      {
+        verifiedDeals.length > 0 ? (
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-            {batterySavers.map(
+            {verifiedDeals.map(
               (deal: any) =>
                 deal.game_id && (
                   <GameCard
@@ -97,9 +77,50 @@ console.log("🔍 Deal of Day:", {
                     showDeal={true}
                     dealDiscount={deal.discount_percent}
                     dealPrice={deal.price}
+                    dealStore={deal.store}
+                    isHistoricalLow={deal.is_historical_low}
                   />
                 ),
             )}
+          </div>
+        ) : (
+          <EmptyState
+            title="No featured deals right now"
+            message="Check back soon for verified Steam Deck deals!"
+          />
+        )
+      }
+    </section>
+
+    <!-- Battery Savers -->
+    {
+      batterySavers.length > 0 && (
+        <section class="bg-zinc-900/30 border-y border-zinc-800">
+          <div class="container mx-auto px-4 py-12">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-3xl font-bold">🔋 Battery Savers</h2>
+              <a
+                href="/browse?filter=battery"
+                class="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 text-sm font-medium"
+              >
+                View All →
+              </a>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+              {batterySavers.map(
+                (deal: any) =>
+                  deal.game_id && (
+                    <GameCard
+                      game={deal.game_id}
+                      showDeal={true}
+                      dealDiscount={deal.discount_percent}
+                      dealPrice={deal.price}
+                      dealStore={deal.store}
+                      isHistoricalLow={deal.is_historical_low}
+                    />
+                  ),
+              )}
+            </div>
           </div>
         </section>
       )
@@ -107,24 +128,44 @@ console.log("🔍 Deal of Day:", {
 
     <!-- Top Discounts -->
     <section class="container mx-auto px-4 py-12">
-      <h2 class="text-3xl font-bold mb-6">💰 Top Discounts (50%+ Off)</h2>
-      <div
-        class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4"
-      >
-        {
-          topDiscounts.map(
-            (deal: any) =>
-              deal.game_id && (
-                <GameCard
-                  game={deal.game_id}
-                  showDeal={true}
-                  dealDiscount={deal.discount_percent}
-                  dealPrice={deal.price}
-                />
-              ),
-          )
-        }
+      <div class="flex items-center justify-between mb-2">
+        <div>
+          <h2 class="text-3xl font-bold">💰 Top Discounts (50%+ Off)</h2>
+          <p class="text-sm text-zinc-500 mt-1">
+            Great prices, some compromises
+          </p>
+        </div>
+        <a
+          href="/browse?filter=top-discounts"
+          class="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 text-sm font-medium"
+        >
+          View All →
+        </a>
       </div>
+      {
+        topDiscounts.length > 0 ? (
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            {topDiscounts.map(
+              (deal: any) =>
+                deal.game_id && (
+                  <GameCard
+                    game={deal.game_id}
+                    showDeal={true}
+                    dealDiscount={deal.discount_percent}
+                    dealPrice={deal.price}
+                    dealStore={deal.store}
+                    isHistoricalLow={deal.is_historical_low}
+                  />
+                ),
+            )}
+          </div>
+        ) : (
+          <EmptyState
+            title="No big discounts available"
+            message="Deals refresh daily - check back tomorrow!"
+          />
+        )
+      }
     </section>
   </main>
 </Layout>

@@ -8,83 +8,107 @@ const game = deal.game_id;
 
 function getDeckBadgeColor(status: string): string {
   const colors: Record<string, string> = {
-    verified: 'badge-verified',
-    playable: 'badge-playable',
-    unsupported: 'badge-unsupported',
-    unknown: 'bg-zinc-800 text-zinc-400',
+    verified: "badge-verified",
+    playable: "badge-playable",
+    unsupported: "badge-unsupported",
+    unknown: "bg-zinc-800 text-zinc-400",
   };
   return colors[status] || colors.unknown;
 }
 
 const whyItWorksPoints = [];
 
-if (game.deck_status === 'verified') {
-  whyItWorksPoints.push({ icon: '✅', text: 'Steam Deck Verified - works perfectly' });
+if (game.deck_status === "verified") {
+  whyItWorksPoints.push({
+    icon: "✅",
+    text: "Steam Deck Verified - works perfectly",
+  });
 }
 
-if (game.controller_support === 'full') {
-  whyItWorksPoints.push({ icon: '✅', text: 'Full controller support' });
+if (game.controller_support === "full") {
+  whyItWorksPoints.push({ icon: "✅", text: "Full controller support" });
 }
 
-if (game.battery_drain === 'low') {
-  whyItWorksPoints.push({ icon: '✅', text: 'Low battery drain - expect 5-7 hours' });
+if (game.battery_drain === "low") {
+  whyItWorksPoints.push({
+    icon: "✅",
+    text: "Low battery drain - expect 5-7 hours",
+  });
 }
 
 if (game.offline_playable) {
-  whyItWorksPoints.push({ icon: '✅', text: 'Works offline - perfect for travel' });
+  whyItWorksPoints.push({
+    icon: "✅",
+    text: "Works offline - perfect for travel",
+  });
 }
 
 if (game.cloud_save) {
-  whyItWorksPoints.push({ icon: '✅', text: 'Cloud saves enabled' });
+  whyItWorksPoints.push({ icon: "✅", text: "Cloud saves enabled" });
 }
 
-if (game.launcher && game.launcher !== 'steam') {
-  whyItWorksPoints.push({ icon: '⚠️', text: `Requires ${game.launcher.toUpperCase()} launcher` });
+if (game.launcher && game.launcher !== "steam") {
+  whyItWorksPoints.push({
+    icon: "⚠️",
+    text: `Requires ${game.launcher.toUpperCase()} launcher`,
+  });
 }
 
 if (game.small_text_warning) {
-  whyItWorksPoints.push({ icon: '⚠️', text: 'Small UI text on 7" screen' });
+  whyItWorksPoints.push({ icon: "⚠️", text: 'Small UI text on 7" screen' });
 }
 
 if (game.always_online) {
-  whyItWorksPoints.push({ icon: '⚠️', text: 'Requires internet connection' });
+  whyItWorksPoints.push({ icon: "⚠️", text: "Requires internet connection" });
 }
 
 if (whyItWorksPoints.length === 0) {
-  whyItWorksPoints.push({ icon: '✅', text: 'Great deal on quality game' });
+  whyItWorksPoints.push({ icon: "✅", text: "Great deal on quality game" });
 }
 ---
 
-<article class="relative overflow-hidden rounded-xl bg-gradient-to-br from-deck-orange/20 via-zinc-900 to-purple-900/20 border-2 border-deck-orange/50 p-1 max-w-4xl mx-auto">
+<article
+  class="relative overflow-hidden rounded-xl bg-gradient-to-br from-deck-orange/20 via-zinc-900 to-purple-900/20 border-2 border-deck-orange/50 p-1 max-w-4xl mx-auto"
+>
   <div class="bg-zinc-950 rounded-lg p-4">
     <div class="flex items-center gap-2 mb-3">
-      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-deck-orange text-zinc-950 rounded-full text-xs font-bold uppercase tracking-wide">
+      <span
+        class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-deck-orange text-zinc-950 rounded-full text-xs font-bold uppercase tracking-wide"
+      >
         🔥 Deal of the Day
       </span>
-      {deal.is_historical_low && (
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-600 text-white rounded-full text-xs font-bold">
-          💎 Historical Low
-        </span>
-      )}
+      {
+        deal.is_historical_low && (
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-600 text-white rounded-full text-xs font-bold">
+            💎 Historical Low
+          </span>
+        )
+      }
     </div>
 
     <div class="grid md:grid-cols-[240px_1fr] gap-5 items-start">
       <div class="relative group">
-        <div class="aspect-[3/4] rounded-lg overflow-hidden bg-zinc-800 shadow-xl">
-          {game.cover_image_url ? (
-            <img 
-              src={game.cover_image_url} 
-              alt={game.title}
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            />
-          ) : (
-            <div class="w-full h-full flex items-center justify-center text-5xl">
-              🎮
-            </div>
-          )}
+        <div
+          class="aspect-[3/4] rounded-lg overflow-hidden bg-zinc-800 shadow-xl"
+        >
+          {
+            game.cover_image_url ? (
+              <img
+                src={game.cover_image_url}
+                alt={game.title}
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+            ) : (
+              <div class="w-full h-full flex items-center justify-center text-5xl">
+                🎮
+              </div>
+            )
+          }
         </div>
-        
-        <div class="absolute top-2 right-2 bg-deck-orange text-zinc-950 px-2.5 py-1 rounded-lg font-bold text-lg shadow-lg">
+
+        <div
+          class="absolute top-2 right-2 bg-deck-orange text-zinc-950 px-2.5 py-1 rounded-lg font-bold text-lg shadow-lg"
+        >
           -{deal.discount_percent}%
         </div>
       </div>
@@ -94,26 +118,40 @@ if (whyItWorksPoints.length === 0) {
           <h2 class="text-2xl font-bold text-zinc-50 mb-2">
             {game.title}
           </h2>
-          
+
           <div class="flex flex-wrap gap-1.5 mb-2">
-            <span class={`badge text-xs ${getDeckBadgeColor(game.deck_status)}`}>
-              {game.deck_status === 'verified' && '✓ Verified'}
-              {game.deck_status === 'playable' && '⚠ Playable'}
-              {game.deck_status === 'unsupported' && '✗ Unsupported'}
-              {game.deck_status === 'unknown' && '? Unknown'}
+            <span
+              class={`badge text-xs ${getDeckBadgeColor(game.deck_status)}`}
+            >
+              {game.deck_status === "verified" && "✓ Verified"}
+              {game.deck_status === "playable" && "⚠ Playable"}
+              {game.deck_status === "unsupported" && "✗ Unsupported"}
+              {game.deck_status === "unknown" && "? Unknown"}
             </span>
-            
-            {game.controller_support === 'full' && (
-              <span class="badge bg-blue-900/50 text-blue-400 text-xs">🎮 Full Controller</span>
-            )}
-            
-            {game.battery_drain === 'low' && (
-              <span class="badge bg-green-900/50 text-green-400 text-xs">🔋 Low Power</span>
-            )}
-            
-            {game.offline_playable && (
-              <span class="badge bg-purple-900/50 text-purple-400 text-xs">✈️ Offline</span>
-            )}
+
+            {
+              game.controller_support === "full" && (
+                <span class="badge bg-blue-900/50 text-blue-400 text-xs">
+                  🎮 Full Controller
+                </span>
+              )
+            }
+
+            {
+              game.battery_drain === "low" && (
+                <span class="badge bg-green-900/50 text-green-400 text-xs">
+                  🔋 Low Power
+                </span>
+              )
+            }
+
+            {
+              game.offline_playable && (
+                <span class="badge bg-purple-900/50 text-purple-400 text-xs">
+                  ✈️ Offline
+                </span>
+              )
+            }
           </div>
         </div>
 
@@ -122,12 +160,14 @@ if (whyItWorksPoints.length === 0) {
             🎯 Why This Works on Handhelds
           </h3>
           <ul class="space-y-1">
-            {whyItWorksPoints.slice(0, 4).map(point => (
-              <li class="flex items-start gap-2 text-xs">
-                <span class="text-sm flex-shrink-0">{point.icon}</span>
-                <span class="text-zinc-300">{point.text}</span>
-              </li>
-            ))}
+            {
+              whyItWorksPoints.slice(0, 4).map((point) => (
+                <li class="flex items-start gap-2 text-xs">
+                  <span class="text-sm flex-shrink-0">{point.icon}</span>
+                  <span class="text-zinc-300">{point.text}</span>
+                </li>
+              ))
+            }
           </ul>
         </div>
 
@@ -140,22 +180,37 @@ if (whyItWorksPoints.length === 0) {
               ${Number(deal.price).toFixed(2)}
             </span>
             <span class="text-lg font-bold text-green-400">
-              Save ${(Number(deal.normal_price) - Number(deal.price)).toFixed(2)}
+              Save ${
+                (Number(deal.normal_price) - Number(deal.price)).toFixed(2)
+              }
             </span>
           </div>
 
-          <a 
+          <a
             href={deal.url}
             target="_blank"
             rel="noopener noreferrer"
             class="btn btn-primary w-full text-sm py-2.5 flex items-center justify-center gap-2"
+            data-game-id={game.id}
+            data-game-slug={game.slug}
+            data-store={deal.store}
+            data-deal-id={deal.id}
+            data-tracking="deal-of-day-cta"
           >
             Buy on {deal.store.charAt(0).toUpperCase() + deal.store.slice(1)} →
           </a>
 
           <div class="flex gap-3 text-xs text-zinc-400">
-            {game.metacritic_score && <span>Metacritic: {game.metacritic_score}</span>}
-            {game.steam_positive_percent && <span>👍 {game.steam_positive_percent}% positive</span>}
+            {
+              game.metacritic_score && (
+                <span>Metacritic: {game.metacritic_score}</span>
+              )
+            }
+            {
+              game.steam_positive_percent && (
+                <span>👍 {game.steam_positive_percent}% positive</span>
+              )
+            }
           </div>
         </div>
       </div>
