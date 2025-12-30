@@ -1,0 +1,94 @@
+---
+// Device Switcher Component (v3.0 Critical Feature)
+// Uses cookies for server-side device awareness
+const currentDevice = Astro.locals.device || "all";
+---
+
+<div class="device-switcher">
+  <div
+    class="flex items-center gap-2 bg-zinc-900/50 rounded-lg p-1 border border-zinc-800"
+  >
+    <button
+      data-device="all"
+      class:list={[
+        "device-btn px-3 py-1.5 rounded-md text-sm font-medium transition-all",
+        { active: currentDevice === "all" },
+      ]}
+    >
+      All Devices
+    </button>
+    <button
+      data-device="steam_deck"
+      class:list={[
+        "device-btn px-3 py-1.5 rounded-md text-sm font-medium transition-all",
+        { active: currentDevice === "steam_deck" },
+      ]}
+    >
+      🎮 Steam Deck
+    </button>
+    <button
+      data-device="rog_ally"
+      class:list={[
+        "device-btn px-3 py-1.5 rounded-md text-sm font-medium transition-all",
+        { active: currentDevice === "rog_ally" },
+      ]}
+    >
+      ⚡ ROG Ally
+    </button>
+    <button
+      data-device="legion_go"
+      class:list={[
+        "device-btn px-3 py-1.5 rounded-md text-sm font-medium transition-all",
+        { active: currentDevice === "legion_go" },
+      ]}
+    >
+      🎯 Legion GO
+    </button>
+  </div>
+</div>
+
+<style>
+  .device-btn {
+    @apply text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50;
+  }
+
+  .device-btn.active {
+    @apply bg-blue-600 text-white;
+  }
+</style>
+
+<script is:inline>
+  // Device switcher with cookie persistence
+
+  // Wait for DOM
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initDeviceSwitcher);
+  } else {
+    initDeviceSwitcher();
+  }
+
+  function initDeviceSwitcher() {
+    const buttons = document.querySelectorAll(".device-btn");
+
+    buttons.forEach((btn) => {
+      btn.addEventListener("click", function () {
+        const device = this.getAttribute("data-device");
+        if (!device) return;
+
+        console.log("Device clicked:", device);
+
+        // Set cookie for 1 year
+        const expires = new Date();
+        expires.setFullYear(expires.getFullYear() + 1);
+        document.cookie = `handheld_device=${device}; path=/; max-age=31536000; SameSite=Lax`;
+
+        console.log("Cookie set, reloading...");
+
+        // Reload to apply device filter server-side
+        window.location.reload();
+      });
+    });
+
+    console.log("Device switcher initialized");
+  }
+</script>

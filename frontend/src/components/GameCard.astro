@@ -126,12 +126,18 @@ const rarityClass = showDeal ? getRarityClass(dealDiscount) : "";
           </span>
         )
       }
-      <span class="badge bg-zinc-800 text-zinc-400 font-mono text-xs"
-        >🔋 {
-          game.battery_drain.charAt(0).toUpperCase() +
-            game.battery_drain.slice(1)
-        }</span
-      >
+
+      {/* ✅ FIXED: battery_drain is now safely guarded */}
+      {
+        game.battery_drain && (
+          <span class="badge bg-zinc-800 text-zinc-400 font-mono text-xs">
+            🔋{" "}
+            {game.battery_drain.charAt(0).toUpperCase() +
+              game.battery_drain.slice(1)}
+          </span>
+        )
+      }
+
       {
         game.launcher && game.launcher !== "steam" && (
           <span
