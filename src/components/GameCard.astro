@@ -1,0 +1,214 @@
+---
+interface Props {
+  game: any;
+  showDeal?: boolean;
+  dealDiscount?: number;
+  dealPrice?: number;
+  dealStore?: string;
+  isHistoricalLow?: boolean;
+}
+
+const {
+  game,
+  showDeal = false,
+  dealDiscount = 0,
+  dealPrice = 0,
+  dealStore = "",
+  isHistoricalLow = false,
+} = Astro.props;
+
+function getDeckBadgeColor(status: string): string {
+  const colors: Record<string, string> = {
+    verified: "badge-verified",
+    playable: "badge-playable",
+    unsupported: "badge-unsupported",
+    unknown: "bg-zinc-800 text-zinc-400",
+  };
+  return colors[status] || colors.unknown;
+}
+
+function getRarityClass(discount: number): string {
+  if (discount >= 60) return "deal-card-legendary";
+  if (discount >= 40) return "deal-card-epic";
+  if (discount >= 20) return "deal-card-rare";
+  return "deal-card-common";
+}
+
+const rarityClass = showDeal ? getRarityClass(dealDiscount) : "";
+---
+
+<a
+  href={`/game/${game.slug}`}
+  class="block h-full"
+  data-game-id={game.id}
+  data-game-slug={game.slug}
+  data-tracking="game-card-click"
+>
+  <article
+    class={`deal-card ${rarityClass} group cursor-pointer h-full flex flex-col`}
+  >
+    <div
+      class="aspect-[3/4] bg-zinc-800 rounded-lg overflow-hidden mb-3 relative"
+    >
+      {
+        game.cover_image_url ? (
+          <img
+            src={game.cover_image_url}
+            alt={game.title}
+            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          <div class="w-full h-full flex items-center justify-center text-4xl">
+            🎮
+          </div>
+        )
+      }
+      {
+        isHistoricalLow && (
+          <div class="absolute top-3 left-3 bg-green-600 text-white px-2.5 py-1 rounded-full text-xs font-bold shadow-lg historical-low-glow">
+            💎 Historical Low
+          </div>
+        )
+      }
+    </div>
+
+    <h3
+      class="font-semibold text-zinc-50 mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors"
+    >
+      {game.title}
+    </h3>
+
+    <div class="flex flex-wrap gap-2 mb-3">
+      {
+        game.deck_status === "verified" && (
+          <span class="badge badge-verified">
+            <>
+              <span class="inline md:hidden">✓</span>
+              <span class="hidden md:inline">✓ Verified</span>
+            </>
+          </span>
+        )
+      }
+      {
+        game.deck_status === "playable" && (
+          <span class="badge badge-playable">
+            <>
+              <span class="inline md:hidden">⚠</span>
+              <span class="hidden md:inline">⚠ Playable</span>
+            </>
+          </span>
+        )
+      }
+      {
+        game.deck_status === "unsupported" && (
+          <span class="badge badge-unsupported">
+            <>
+              <span class="inline md:hidden">✗</span>
+              <span class="hidden md:inline">✗ Unsupported</span>
+            </>
+          </span>
+        )
+      }
+      {
+        game.deck_status === "unknown" && (
+          <span class="badge bg-zinc-800 text-zinc-400">
+            <>
+              <span class="inline md:hidden">?</span>
+              <span class="hidden md:inline">? Unknown</span>
+            </>
+          </span>
+        )
+      }
+      {
+        game.controller_support === "full" && (
+          <span class="badge bg-blue-900/50 text-blue-400">
+            🎮 Full Controller
+          </span>
+        )
+      }
+      <span class="badge bg-zinc-800 text-zinc-400 font-mono text-xs"
+        >🔋 {
+          game.battery_drain.charAt(0).toUpperCase() +
+            game.battery_drain.slice(1)
+        }</span
+      >
+      {
+        game.launcher && game.launcher !== "steam" && (
+          <span
+            class="badge bg-yellow-900/50 text-yellow-400 border border-yellow-800 text-xs"
+            title={`Requires ${game.launcher.toUpperCase()} launcher`}
+          >
+            ⚠️ {game.launcher.toUpperCase()}
+          </span>
+        )
+      }
+      {
+        game.always_online && (
+          <span
+            class="badge bg-red-900/50 text-red-400 border border-red-800 text-xs"
+            title="Requires internet connection"
+          >
+            ⚠️ Online
+          </span>
+        )
+      }
+      {
+        game.small_text_warning && (
+          <span
+            class="badge bg-orange-900/50 text-orange-400 border border-orange-800 text-xs"
+            title="Small UI text on 7 inch screen"
+          >
+            ⚠️ Small Text
+          </span>
+        )
+      }
+      {
+        game.anti_cheat_issues && (
+          <span
+            class="badge bg-red-900/50 text-red-400 border border-red-800 text-xs"
+            title="Anti-cheat may cause issues"
+          >
+            ⚠️ Anti-cheat
+          </span>
+        )
+      }
+    </div>
+
+    <div class="flex-1"></div>
+
+    {
+      showDeal && (
+        <div class="pt-3 border-t border-zinc-800 mt-auto">
+          <div class="flex items-baseline gap-2 mb-2">
+            <span class="text-2xl font-bold text-zinc-50 font-mono">
+              ${Number(dealPrice).toFixed(2)}
+            </span>
+            <span class="text-sm text-zinc-500 line-through">
+              $
+              {(Number(dealPrice) / (1 - Number(dealDiscount) / 100)).toFixed(
+                2,
+              )}
+            </span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="inline-flex items-center px-2 py-0.5 bg-green-900/50 text-green-400 rounded-full text-xs font-bold">
+              Save {dealDiscount}%
+            </span>
+            {dealStore && (
+              <span class="text-xs text-zinc-400">on {dealStore}</span>
+            )}
+          </div>
+        </div>
+      )
+    }
+
+    <div class="flex gap-2 text-xs text-zinc-500 mt-2">
+      {game.metacritic_score && <span>MC: {game.metacritic_score}</span>}
+      {
+        game.steam_positive_percent && (
+          <span>👍 {game.steam_positive_percent}%</span>
+        )
+      }
+    </div>
+  </article>
+</a>

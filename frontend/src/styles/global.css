@@ -57,36 +57,94 @@
 
 /* Gaming-inspired rarity badges */
 @layer components {
+
+  /* LEGENDARY GLOW - Orange (60%+ discount) */
   .deal-card-legendary {
-    @apply border-rarity-legendary;
-    /* Remove always-on glow, add only on hover: */
+    @apply border-2 border-rarity-legendary;
+    box-shadow:
+      0 4px 20px rgba(255, 136, 0, 0.3),
+      0 0 30px rgba(255, 136, 0, 0.15);
+    transform: translateY(0);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .deal-card-legendary:hover {
-    @apply shadow-glow-legendary;
+    transform: translateY(-8px);
+    box-shadow:
+      0 12px 40px rgba(255, 136, 0, 0.5),
+      0 0 60px rgba(255, 136, 0, 0.3);
+    border-color: rgb(255, 136, 0);
   }
 
+  /* EPIC GLOW - Purple (40-60% discount) */
   .deal-card-epic {
-    @apply border-rarity-epic;
+    @apply border-2 border-rarity-epic;
+    box-shadow:
+      0 4px 20px rgba(168, 85, 247, 0.3),
+      0 0 30px rgba(168, 85, 247, 0.15);
+    transform: translateY(0);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .deal-card-epic:hover {
-    @apply shadow-glow-epic;
+    transform: translateY(-8px);
+    box-shadow:
+      0 12px 40px rgba(168, 85, 247, 0.5),
+      0 0 60px rgba(168, 85, 247, 0.3);
+    border-color: rgb(168, 85, 247);
   }
 
+  /* RARE GLOW - Blue (20-40% discount) */
   .deal-card-rare {
-    @apply border-rarity-rare;
+    @apply border-2 border-rarity-rare;
+    box-shadow:
+      0 4px 20px rgba(59, 130, 246, 0.25),
+      0 0 25px rgba(59, 130, 246, 0.12);
+    transform: translateY(0);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .deal-card-rare:hover {
-    @apply shadow-glow-rare;
+    transform: translateY(-6px);
+    box-shadow:
+      0 10px 35px rgba(59, 130, 246, 0.4),
+      0 0 50px rgba(59, 130, 246, 0.25);
+    border-color: rgb(59, 130, 246);
   }
 
+  /* COMMON - Subtle (< 20% discount) */
   .deal-card-common {
-    @apply border-rarity-common;
+    @apply border border-zinc-800;
+    transform: translateY(0);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .deal-card-common:hover {
-    @apply shadow-glow-common;
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    border-color: rgb(113, 113, 122);
+  }
+
+  /* Base deal card */
+  .deal-card {
+    @apply bg-zinc-900/50 backdrop-blur-sm rounded-xl p-4;
+    @apply border border-zinc-800;
+  }
+
+  /* Historical Low Pulse Animation */
+  @keyframes glow-pulse {
+
+    0%,
+    100% {
+      box-shadow: 0 0 15px rgba(34, 197, 94, 0.4);
+    }
+
+    50% {
+      box-shadow: 0 0 25px rgba(34, 197, 94, 0.7);
+    }
+  }
+
+  .historical-low-glow {
+    animation: glow-pulse 2s ease-in-out infinite;
   }
 }
