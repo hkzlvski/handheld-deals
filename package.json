@@ -17,5 +17,12 @@
     "test:alerts": "node scripts/process-price-alerts.js",
     "test:stale-reviews": "node scripts/flag-stale-reviews.js",
     "test:stale-data": "node scripts/downgrade-stale-data.js"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^10.1.0",
+    "dotenv": "^17.2.3"
+  },
+  "dependencies": {
+    "@directus/sdk": "^18.0.3"
   }
 }
