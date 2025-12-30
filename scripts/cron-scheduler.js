@@ -15,6 +15,7 @@ require('dotenv').config();
 const cron = require('node-cron');
 const fs = require('fs');
 const path = require('path');
+const { pingHealthcheck } = require('./utils/healthcheck-ping');
 
 // Import all cron scripts
 const { fetchCheapSharkDeals } = require('./fetch-cheapshark');
@@ -42,7 +43,7 @@ if (!fs.existsSync(logsDir)) {
 /**
  * Log wrapper for cron jobs
  */
-function logJob(jobName, logFn) {
+function logJob(jobName, logFn, healthcheckUrl = null) {
   return async () => {
     const logFile = path.join(logsDir, `cron-${jobName}.log`);
     const timestamp = new Date().toISOString();
@@ -75,6 +76,12 @@ function logJob(jobName, logFn) {
       await logFn();
 
       console.log(`\n✅ CRON JOB COMPLETED: ${jobName}\n`);
+
+      // Ping healthchecks.io on success
+      if (healthcheckUrl) {
+        pingHealthcheck(healthcheckUrl);
+      }
+
     } catch (error) {
       console.error(`❌ CRON JOB FAILED: ${jobName}`);
       console.error(`Error: ${error.message}`);
@@ -99,76 +106,67 @@ console.log('📅 Scheduling all cron jobs...\n');
 // ============================================================================
 
 // Price updates - Every hour at :00
-cron.schedule('0 * * * *', logJob('cheapshark', fetchCheapSharkDeals), {
+cron.schedule('0 * * * *', logJob('cheapshark', fetchCheapSharkDeals, process.env.HEALTHCHECK_CHEAPSHARK), {
   scheduled: true,
   timezone: "Europe/Warsaw"
 });
-console.log('✅ Scheduled: CheapShark deals (hourly at :00)');
 
 // Price alerts - Every hour at :15
-cron.schedule('15 * * * *', logJob('price-alerts', processPriceAlerts), {
+cron.schedule('15 * * * *', logJob('price-alerts', processPriceAlerts, process.env.HEALTHCHECK_PRICE_ALERTS), {
   scheduled: true,
   timezone: "Europe/Warsaw"
 });
-console.log('✅ Scheduled: Price alerts (hourly at :15)');
 
 // Event status - Every hour at :30
-cron.schedule('30 * * * *', logJob('events', updateEventStatus), {
+cron.schedule('30 * * * *', logJob('events', updateEventStatus, process.env.HEALTHCHECK_EVENTS), {
   scheduled: true,
   timezone: "Europe/Warsaw"
 });
-console.log('✅ Scheduled: Event status (hourly at :30)');
 
 // EVERY 6 HOURS
 // ============================================================================
 
 // ProtonDB sync - Every 6 hours at :00
-cron.schedule('0 */6 * * *', logJob('protondb', syncProtonDB), {
+cron.schedule('0 */6 * * *', logJob('protondb', syncProtonDB, process.env.HEALTHCHECK_PROTONDB), {
   scheduled: true,
   timezone: "Europe/Warsaw"
 });
-console.log('✅ Scheduled: ProtonDB sync (every 6 hours)');
 
 // DAILY JOBS
 // ============================================================================
 
 // Steam sync - Daily at 2 AM
-cron.schedule('0 2 * * *', logJob('steam', syncSteamData), {
+cron.schedule('0 2 * * *', logJob('steam', syncSteamData, process.env.HEALTHCHECK_STEAM), {
   scheduled: true,
   timezone: "Europe/Warsaw"
 });
-console.log('✅ Scheduled: Steam sync (daily at 2 AM)');
 
 // Deal cleanup - Daily at 4 AM
-cron.schedule('0 4 * * *', logJob('cleanup-deals', cleanupOldDeals), {
+cron.schedule('0 4 * * *', logJob('cleanup-deals', cleanupOldDeals, process.env.HEALTHCHECK_CLEANUP_DEALS), {
   scheduled: true,
   timezone: "Europe/Warsaw"
 });
-console.log('✅ Scheduled: Deal cleanup (daily at 4 AM)');
 
 // Preferences cleanup - Daily at 5 AM
-cron.schedule('0 5 * * *', logJob('cleanup-preferences', cleanupPreferences), {
+cron.schedule('0 5 * * *', logJob('cleanup-preferences', cleanupPreferences, process.env.HEALTHCHECK_CLEANUP_PREFS), {
   scheduled: true,
   timezone: "Europe/Warsaw"
 });
-console.log('✅ Scheduled: Preferences cleanup (daily at 5 AM)');
 
 // WEEKLY JOBS
 // ============================================================================
 
 // Stale data downgrade - Monday at 3 AM
-cron.schedule('0 3 * * 1', logJob('stale-data', downgradeStaleData), {
+cron.schedule('0 3 * * 1', logJob('stale-data', downgradeStaleData, process.env.HEALTHCHECK_STALE_DATA), {
   scheduled: true,
   timezone: "Europe/Warsaw"
 });
-console.log('✅ Scheduled: Stale data downgrade (Monday at 3 AM)');
 
 // Stale reviews - Monday at 4 AM
-cron.schedule('0 4 * * 1', logJob('stale-reviews', flagStaleReviews), {
+cron.schedule('0 4 * * 1', logJob('stale-reviews', flagStaleReviews, process.env.HEALTHCHECK_STALE_REVIEWS), {
   scheduled: true,
   timezone: "Europe/Warsaw"
 });
-console.log('✅ Scheduled: Stale reviews (Monday at 4 AM)');
 
 // ============================================================================
 // STATUS & KEEP ALIVE

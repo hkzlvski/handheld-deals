@@ -170,3 +170,60 @@ EMAIL_ENABLED=false
 EMAIL_FROM=alerts@handhelddeals.com
 RATE_LIMITER_ENABLED=false
 ```
+
+## Monitoring & Health Checks
+
+### Health Check Script
+
+Verifies all cron jobs are running successfully:
+```bash
+npm run health
+```
+
+Checks:
+- Last successful run timestamp
+- Alerts if job overdue (2x expected interval)
+- Sends Discord alerts for critical issues
+
+### Healthchecks.io Integration
+
+Dead Man's Switch monitoring for critical jobs.
+
+Setup:
+1. Create account at https://healthchecks.io (free tier)
+2. Create checks for each critical job
+3. Add ping URLs to .env:
+```env
+   HEALTHCHECK_CHEAPSHARK=https://hc-ping.com/your-uuid
+   HEALTHCHECK_STEAM=https://hc-ping.com/your-uuid
+   # ... etc
+```
+
+Jobs automatically ping on successful completion.
+
+### Discord Alerts
+
+Configure Discord webhook for error notifications:
+
+1. Create Discord webhook in your server
+2. Add to .env:
+```env
+   DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
+```
+
+Alert severity levels:
+- 🚨 **Critical**: All operations failed, service down
+- ⚠️ **High**: >50% operations failed
+- ⚡ **Medium**: 10-50% operations failed  
+- ℹ️ **Low**: <10% operations failed
+
+### Monitoring Schedule
+
+Add health check to cron:
+```javascript
+// Health check - every 30 minutes
+cron.schedule('*/30 * * * *', logJob('health', runHealthCheck), {
+  scheduled: true,
+  timezone: "Europe/Warsaw"
+});
+```

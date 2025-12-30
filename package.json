@@ -6,6 +6,7 @@
   "scripts": {
     "cron": "node scripts/cron-scheduler.js",
     "cron:dev": "nodemon scripts/cron-scheduler.js",
+    "health": "node scripts/health-check.js",
     "test:cheapshark": "node scripts/fetch-cheapshark.js",
     "test:steam": "node scripts/sync-steam-data.js",
     "test:protondb": "node scripts/sync-protondb.js",
