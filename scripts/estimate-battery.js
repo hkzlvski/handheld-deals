@@ -1,210 +1,369 @@
+/**
+ * HANDHELD DEALS - BATTERY LIFE ESTIMATION SCRIPT
+ * 
+ * Estimates battery life for games across three handheld devices:
+ * - Steam Deck (40Whr battery, 4.0h baseline)
+ * - ROG Ally (smaller battery, 3.5h baseline)
+ * - Legion Go (larger battery, 3.8h baseline)
+ * 
+ * Algorithm uses device-specific modifiers based on:
+ * - Genre (indie/AAA/action/puzzle)
+ * - Release year (older = less demanding)
+ * - Optimization (Deck Verified, ProtonDB tier)
+ * - Device-specific TDP characteristics
+ * 
+ * Usage: node scripts/estimate-battery.js
+ */
+
 require('dotenv').config();
-const axios = require('axios');
-const { Logger } = require('./utils/logger');
+const { createDirectus, rest, readItems, updateItem, staticToken } = require('@directus/sdk');
 
-const logger = new Logger('estimate-battery');
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
 
-let directusToken = null;
+const DIRECTUS_URL = process.env.DIRECTUS_API_URL || process.env.PUBLIC_URL || 'http://localhost:8055';
+const ADMIN_TOKEN = process.env.DIRECTUS_ADMIN_TOKEN;
 
-async function getDirectusToken() {
-  if (directusToken) return directusToken;
-  
-  try {
-    const response = await axios.post(`${process.env.DIRECTUS_API_URL}/auth/login`, {
-      email: process.env.DIRECTUS_ADMIN_EMAIL,
-      password: process.env.DIRECTUS_ADMIN_PASSWORD
-    });
-    
-    directusToken = response.data.data.access_token;
-    logger.success('Connected to Directus');
-    return directusToken;
-  } catch (error) {
-    logger.error('Failed to authenticate with Directus', error);
-    throw error;
-  }
+// Validate token
+if (!ADMIN_TOKEN) {
+  console.error('❌ Error: DIRECTUS_ADMIN_TOKEN not found in .env file!');
+  console.error('Please add your admin token to .env:');
+  console.error('DIRECTUS_ADMIN_TOKEN=your_token_here');
+  process.exit(1);
 }
 
-async function directusRequest(method, endpoint, data = null) {
-  const token = await getDirectusToken();
-  const config = {
-    method,
-    url: `${process.env.DIRECTUS_API_URL}${endpoint}`,
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
+// Device-specific base battery hours
+const DEVICE_BASE_HOURS = {
+  steam_deck: 4.0,  // 40Whr battery, balanced performance
+  rog_ally: 3.5,    // Smaller battery, higher TDP
+  legion_go: 3.8    // Larger battery than Ally
+};
+
+// Device-specific clamp ranges (min, max)
+const DEVICE_CLAMPS = {
+  steam_deck: { min: 1.5, max: 8.0 },
+  rog_ally: { min: 1.5, max: 6.0 },   // Shorter due to smaller battery
+  legion_go: { min: 1.5, max: 7.0 }
+};
+
+// Genre modifiers (apply to all devices)
+const GENRE_MODIFIERS = {
+  // Positive modifiers (less demanding)
+  indie: 2.0,
+  '2d': 2.0,
+  puzzle: 1.5,
+  'turn-based': 1.0,
+  roguelike: 1.0,
+  strategy: 0.8,
+
+  // Negative modifiers (more demanding)
+  aaa: -1.5,
+  action: -1.0,
+  fps: -1.0,
+  racing: -0.8,
+  rpg: -0.5,
+  simulation: -0.3
+};
+
+// Device-specific additional modifiers
+const DEVICE_SPECIFIC_MODIFIERS = {
+  rog_ally: {
+    action: -0.5,  // Higher TDP under load
+    fps: -0.5
+  },
+  legion_go: {
+    // Larger battery advantage
+    all: 0.3
+  }
+};
+
+// Release year modifiers
+const RELEASE_YEAR_MODIFIER = {
+  pre2020: 0.5,   // Older, less demanding
+  recent: -0.5    // 2023+, more demanding
+};
+
+// Optimization modifiers
+const OPTIMIZATION_MODIFIERS = {
+  deck_verified: 0.5,      // Valve optimized (Steam Deck only)
+  protondb_platinum: 0.3   // Community-proven efficient
+};
+
+// ============================================================================
+// DIRECTUS CLIENT
+// ============================================================================
+
+const directus = createDirectus(DIRECTUS_URL)
+  .with(staticToken(ADMIN_TOKEN))
+  .with(rest());
+
+// ============================================================================
+// BATTERY ESTIMATION ALGORITHM
+// ============================================================================
+
+/**
+ * Estimate battery life for a specific device
+ * @param {Object} game - Game object from Directus
+ * @param {string} device - Device identifier (steam_deck, rog_ally, legion_go)
+ * @returns {Object} - { hours, category, estimated: true }
+ */
+function estimateBatteryForDevice(game, device) {
+  // Start with device base hours
+  let hours = DEVICE_BASE_HOURS[device];
+
+  // Track applied modifiers for notes
+  const appliedModifiers = [];
+
+  // -------------------------
+  // 1. GENRE MODIFIERS
+  // -------------------------
+  if (game.genre && Array.isArray(game.genre) && game.genre.length > 0) {
+    const genres = game.genre.map(g => String(g).toLowerCase());
+
+    for (const [genreKey, modifier] of Object.entries(GENRE_MODIFIERS)) {
+      if (genres.some(g => g.includes(genreKey))) {
+        hours += modifier;
+        appliedModifiers.push(`Genre ${genreKey}: ${modifier > 0 ? '+' : ''}${modifier}h`);
+        break; // Apply only first matching genre modifier
+      }
     }
-  };
-  
-  if (data) {
-    config.data = data;
-  }
-  
-  const response = await axios(config);
-  return response.data;
-}
-
-function estimateBatteryDrain(game) {
-  // Base assumption: 4 hours average on Steam Deck
-  let baseHours = 4.0;
-  
-  // Handle both 'genre' (JSON) and 'genres' (string) for compatibility
-  let genres = '';
-  if (typeof game.genre === 'string') {
-    genres = game.genre.toLowerCase();
-  } else if (game.genre) {
-    genres = JSON.stringify(game.genre).toLowerCase();
-  } else if (game.genres) {
-    genres = game.genres.toLowerCase();
-  }
-  
-  const releaseYear = game.release_year || 2020;
-  const deckStatus = game.deck_status || 'unknown';
-  const controllerSupport = game.controller_support || 'unknown';
-  
-  // Genre modifiers
-  if (genres.includes('indie') || genres.includes('2d') || genres.includes('puzzle')) {
-    baseHours += 2;
-  }
-  
-  if (genres.includes('turn-based') || genres.includes('roguelike') || genres.includes('card')) {
-    baseHours += 1;
-  }
-  
-  if (genres.includes('aaa') || genres.includes('fps') || genres.includes('action') || 
-      genres.includes('shooter') || genres.includes('racing')) {
-    baseHours -= 1.5;
-  }
-  
-  if (genres.includes('strategy') && !genres.includes('turn-based')) {
-    baseHours -= 0.5;
-  }
-  
-  // Release year modifier
-  if (releaseYear >= 2023) {
-    baseHours -= 0.5;
-  } else if (releaseYear >= 2020) {
-    baseHours -= 0.25;
-  } else if (releaseYear <= 2015) {
-    baseHours += 0.5;
-  }
-  
-  // Deck optimization modifier
-  if (deckStatus === 'verified') {
-    baseHours += 0.5;
-  } else if (deckStatus === 'playable') {
-    baseHours += 0.25;
-  }
-  
-  // Controller support modifier
-  if (controllerSupport === 'full') {
-    baseHours += 0;
-  } else if (controllerSupport === 'partial') {
-    baseHours -= 0.5;
-  } else if (controllerSupport === 'none') {
-    baseHours -= 0.75;
-  }
-  
-  // Clamp between 1.5h - 8h
-  const finalHours = Math.max(1.5, Math.min(8, baseHours));
-  
-  // Categorize
-  let category;
-  if (finalHours >= 5) {
-    category = 'low';
-  } else if (finalHours >= 3) {
-    category = 'medium';
   } else {
-    category = 'high';
+    // No genre data - use baseline only
+    appliedModifiers.push(`No genre data - baseline only`);
   }
-  
+
+  // -------------------------
+  // 2. DEVICE-SPECIFIC MODIFIERS
+  // -------------------------
+  if (device === 'rog_ally' && game.genre && Array.isArray(game.genre) && game.genre.length > 0) {
+    const genres = game.genre.map(g => String(g).toLowerCase());
+    const deviceMods = DEVICE_SPECIFIC_MODIFIERS.rog_ally;
+
+    for (const [genreKey, modifier] of Object.entries(deviceMods)) {
+      if (genres.some(g => g.includes(genreKey))) {
+        hours += modifier;
+        appliedModifiers.push(`ROG Ally ${genreKey}: ${modifier}h`);
+      }
+    }
+  }
+
+  if (device === 'legion_go') {
+    hours += DEVICE_SPECIFIC_MODIFIERS.legion_go.all;
+    appliedModifiers.push(`Legion Go battery: +0.3h`);
+  }
+
+  // -------------------------
+  // 3. RELEASE YEAR MODIFIER
+  // -------------------------
+  if (game.release_year) {
+    if (game.release_year < 2020) {
+      hours += RELEASE_YEAR_MODIFIER.pre2020;
+      appliedModifiers.push(`Pre-2020: +0.5h`);
+    } else if (game.release_year >= 2023) {
+      hours += RELEASE_YEAR_MODIFIER.recent;
+      appliedModifiers.push(`2023+ release: -0.5h`);
+    }
+  }
+
+  // -------------------------
+  // 4. OPTIMIZATION MODIFIERS
+  // -------------------------
+  // Deck Verified (Steam Deck only)
+  if (device === 'steam_deck' && game.deck_status === 'verified') {
+    hours += OPTIMIZATION_MODIFIERS.deck_verified;
+    appliedModifiers.push(`Deck Verified: +0.5h`);
+  }
+
+  // ProtonDB Platinum (all devices)
+  if (game.protondb_tier === 'platinum') {
+    hours += OPTIMIZATION_MODIFIERS.protondb_platinum;
+    appliedModifiers.push(`ProtonDB Platinum: +0.3h`);
+  }
+
+  // -------------------------
+  // 5. CLAMP TO DEVICE RANGE
+  // -------------------------
+  const clamp = DEVICE_CLAMPS[device];
+  hours = Math.max(clamp.min, Math.min(clamp.max, hours));
+
+  // -------------------------
+  // 6. CATEGORIZE
+  // -------------------------
+  let category;
+  if (device === 'steam_deck') {
+    if (hours >= 5) category = 'low';
+    else if (hours >= 3) category = 'medium';
+    else category = 'high';
+  } else if (device === 'rog_ally') {
+    if (hours >= 4) category = 'low';
+    else if (hours >= 2.5) category = 'medium';
+    else category = 'high';
+  } else { // legion_go
+    if (hours >= 4.5) category = 'low';
+    else if (hours >= 3) category = 'medium';
+    else category = 'high';
+  }
+
+  // Round to 1 decimal place
+  hours = Math.round(hours * 10) / 10;
+
   return {
+    hours,
     category,
-    estimatedHours: Math.round(finalHours * 10) / 10
+    estimated: true,
+    notes: `Estimated based on: ${appliedModifiers.join(', ') || 'baseline only'}`
   };
 }
 
-async function updateGameBattery(game) {
-  try {
-    const battery = estimateBatteryDrain(game);
-    
-    // Only update if currently 'medium' (default) or empty
-    if (game.battery_drain !== 'medium' && game.battery_drain) {
-      logger.info(`Skipping ${game.title} - already has custom battery value`);
-      logger.incrementStat('skipped');
-      return;
-    }
-    
-    await directusRequest('PATCH', `/items/games/${game.id}`, {
-      battery_drain: battery.category
-    });
-    
-    logger.success(`${game.title}: ${battery.category} (~${battery.estimatedHours}h)`);
-    logger.incrementStat('updated');
-    
-  } catch (error) {
-    console.error('FULL ERROR for', game.title, ':', error.response?.data || error.message || error);
-    logger.error(`Failed to update battery for "${game.title}"`, error.response?.data?.errors?.[0]?.message || error.message);
-    logger.incrementStat('errors');
+/**
+ * Estimate battery for all three devices
+ * @param {Object} game - Game object from Directus
+ * @returns {Object} - device_performance object with all devices
+ */
+function estimateAllDevices(game) {
+  const devices = ['steam_deck', 'rog_ally', 'legion_go'];
+  const devicePerformance = {};
+
+  for (const device of devices) {
+    const estimate = estimateBatteryForDevice(game, device);
+
+    devicePerformance[device] = {
+      status: 'untested',
+      fps_avg: null,
+      battery_hours: estimate.hours,
+      tested_settings: null,
+      tested_date: null,
+      notes: estimate.notes,
+      estimated: true
+    };
   }
+
+  return devicePerformance;
 }
 
-async function estimateAll() {
-  logger.info('🔋 Starting battery life estimation...');
-  
+// ============================================================================
+// MAIN SCRIPT
+// ============================================================================
+
+async function runBatteryEstimation() {
+  console.log('🔋 BATTERY ESTIMATION SCRIPT STARTING...\n');
+  console.log(`📡 Connecting to Directus: ${DIRECTUS_URL}\n`);
+
   try {
-    await getDirectusToken();
-    
     // Fetch all games
-    logger.info('Fetching games from Directus...');
-    const gamesResult = await directusRequest('GET', '/items/games?limit=-1');
-    
-    const games = gamesResult.data;
-    logger.info(`Found ${games.length} games\n`);
-    
-    if (games.length === 0) {
-      logger.warn('No games to process');
+    console.log('📥 Fetching games from database...');
+    const games = await directus.request(
+      readItems('games', {
+        fields: ['id', 'title', 'genre', 'release_year', 'deck_status', 'protondb_tier', 'device_performance'],
+        limit: -1 // Get all games
+      })
+    );
+
+    console.log(`✅ Found ${games.length} games\n`);
+
+    // Filter games that need estimation
+    // (device_performance is null, empty, or missing battery_hours for any device)
+    const gamesToProcess = games.filter(game => {
+      if (!game.device_performance) return true;
+
+      const dp = game.device_performance;
+      const devices = ['steam_deck', 'rog_ally', 'legion_go'];
+
+      for (const device of devices) {
+        if (!dp[device] || dp[device].battery_hours === null || dp[device].battery_hours === undefined) {
+          return true;
+        }
+      }
+
+      return false;
+    });
+
+    console.log(`🎯 ${gamesToProcess.length} games need battery estimation`);
+    console.log(`⏭️  ${games.length - gamesToProcess.length} games already have estimates\n`);
+
+    if (gamesToProcess.length === 0) {
+      console.log('✅ All games already have battery estimates!');
       return;
     }
-    
-    // Count by category for summary
-    const categoryCounts = { low: 0, medium: 0, high: 0 };
-    
-    // Process each game
-    for (let i = 0; i < games.length; i++) {
-      const game = games[i];
-      logger.incrementStat('processed');
-      
-      const battery = estimateBatteryDrain(game);
-      categoryCounts[battery.category]++;
-      
-      logger.info(`[${i + 1}/${games.length}] ${game.title}: ${battery.category} (~${battery.estimatedHours}h)`);
-      
-      await updateGameBattery(game);
-      
-      // Rate limit delay
-      await new Promise(resolve => setTimeout(resolve, 150));
+
+    // Process games
+    let processed = 0;
+    let errors = 0;
+
+    console.log('⚙️  Processing games...\n');
+
+    for (const game of gamesToProcess) {
+      try {
+        // Estimate for all devices
+        const devicePerformance = estimateAllDevices(game);
+
+        // Update game in Directus
+        await directus.request(
+          updateItem('games', game.id, {
+            device_performance: devicePerformance
+          })
+        );
+
+        processed++;
+
+        // Log progress every 10 games
+        if (processed % 10 === 0) {
+          console.log(`  ✓ Processed ${processed}/${gamesToProcess.length} games...`);
+        }
+
+      } catch (error) {
+        errors++;
+        console.error(`  ❌ Error processing "${game.title}":`, error.message);
+      }
     }
-    
-    logger.info('\n✅ Battery estimation completed!');
-    logger.info('\n📊 Distribution:');
-    logger.info(`Low drain (5-8h):      ${categoryCounts.low} games`);
-    logger.info(`Medium drain (3-5h):   ${categoryCounts.medium} games`);
-    logger.info(`High drain (1.5-3h):   ${categoryCounts.high} games`);
-    
-    logger.printSummary();
-    
+
+    // Summary
+    console.log('\n' + '='.repeat(60));
+    console.log('📊 BATTERY ESTIMATION SUMMARY');
+    console.log('='.repeat(60));
+    console.log(`✅ Successfully processed: ${processed} games`);
+    console.log(`❌ Errors: ${errors} games`);
+    console.log(`📈 Success rate: ${((processed / gamesToProcess.length) * 100).toFixed(1)}%`);
+    console.log('='.repeat(60) + '\n');
+
+    // Sample results
+    if (processed > 0) {
+      console.log('🔍 SAMPLE RESULTS (first 5 games):');
+      const samples = gamesToProcess.slice(0, 5);
+
+      for (const game of samples) {
+        const dp = estimateAllDevices(game);
+        console.log(`\n📌 ${game.title}`);
+        console.log(`   Steam Deck: ~${dp.steam_deck.battery_hours}h`);
+        console.log(`   ROG Ally:   ~${dp.rog_ally.battery_hours}h`);
+        console.log(`   Legion Go:  ~${dp.legion_go.battery_hours}h`);
+      }
+    }
+
+    console.log('\n✅ Battery estimation complete!');
+
   } catch (error) {
-    logger.error('Fatal error during battery estimation', error);
+    console.error('❌ Fatal error:', error);
     process.exit(1);
   }
 }
 
-// Run the script
-estimateAll().then(() => {
-  // Ping healthchecks.io on success
-  const https = require('https');
-  https.get('https://hc-ping.com/1f79ed82-9a89-445d-9b43-8721fb2291dc').on('error', () => {});
-}).catch((error) => {
-  console.error('Script failed:', error);
-  process.exit(1);
-});
+// ============================================================================
+// RUN SCRIPT
+// ============================================================================
+
+if (require.main === module) {
+  runBatteryEstimation()
+    .then(() => process.exit(0))
+    .catch(error => {
+      console.error('❌ Unhandled error:', error);
+      process.exit(1);
+    });
+}
+
+// Export for testing
+module.exports = {
+  estimateBatteryForDevice,
+  estimateAllDevices
+};
