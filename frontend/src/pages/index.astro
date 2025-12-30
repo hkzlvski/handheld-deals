@@ -15,31 +15,93 @@ import {
   getMissionStats,
 } from "../lib/api";
 
-// Fetch all data
+const selectedDevice = Astro.locals.device || "all";
+
 const [dealOfDay, verifiedDeals, batterySavers, topDiscounts, missionStats] =
   await Promise.all([
-    getDealOfTheDay(),
-    getDeckVerifiedDeals(12),
-    getBatterySaverDeals(12),
-    getTopDiscountDeals(12),
+    getDealOfTheDay(selectedDevice),
+    getDeckVerifiedDeals(12, selectedDevice),
+    getBatterySaverDeals(12, selectedDevice),
+    getTopDiscountDeals(12, selectedDevice),
     getMissionStats(),
   ]);
+
+const deviceNames: Record<string, string> = {
+  all: "All Devices",
+  steam_deck: "Steam Deck",
+  rog_ally: "ROG Ally",
+  legion_go: "Legion GO",
+};
+
+const currentDeviceName = deviceNames[selectedDevice];
+const isSpecificDevice = selectedDevice !== "all";
+
+const pageTitle = isSpecificDevice
+  ? `Handheld Deals - Best Gaming Deals for ${currentDeviceName}`
+  : "Handheld Deals - Best Gaming Deals";
+
+const heroDescription = isSpecificDevice
+  ? `Hand-tested game deals verified for ${currentDeviceName} performance and battery life.`
+  : "Find the best game deals for Steam Deck, ROG Ally, and handheld gaming PCs with verified compatibility.";
+
+const sectionTitle = isSpecificDevice
+  ? `⭐ ${currentDeviceName.toUpperCase()} EXCELLENCE`
+  : "🎯 ACTIVE MISSIONS";
+
+const sectionSubtitle = isSpecificDevice
+  ? `Games running excellently on ${currentDeviceName}`
+  : "Verified deals ending soon";
+
+const batterySubtitle = isSpecificDevice
+  ? `5+ hours battery on ${currentDeviceName}`
+  : "Marathon sessions, minimal charging";
+
+const discountSubtitle = isSpecificDevice
+  ? `Huge discounts compatible with ${currentDeviceName}`
+  : "Epic deals, some trade-offs";
+
+const emptyTitle = isSpecificDevice
+  ? `No ${currentDeviceName} deals right now`
+  : "No featured deals right now";
+
+const emptyMessage = isSpecificDevice
+  ? 'Try selecting "All Devices" to see more deals, or check back soon!'
+  : "Check back soon for verified Steam Deck deals!";
+
+const verifiedUrl = isSpecificDevice
+  ? `/browse?filter=verified&device=${selectedDevice}`
+  : "/browse?filter=verified";
+
+const batteryUrl = isSpecificDevice
+  ? `/browse?filter=battery-savers&device=${selectedDevice}`
+  : "/browse?filter=battery-savers";
+
+const discountsUrl = isSpecificDevice
+  ? `/browse?filter=top-discounts&device=${selectedDevice}`
+  : "/browse?filter=top-discounts";
 ---
 
-<Layout title="Handheld Deals - Best Gaming Deals">
+<Layout title={pageTitle}>
   <main class="flex-1">
-    <!-- Hero Section -->
+    <!-- Hero -->
     <section
       class="bg-gradient-to-b from-zinc-900 to-zinc-950 border-b border-zinc-800"
     >
       <div class="container mx-auto px-4 py-16">
         <h1 class="text-6xl md:text-7xl font-bold mb-4">🎮 Handheld Deals</h1>
+
+        {
+          isSpecificDevice && (
+            <p class="text-3xl md:text-4xl text-blue-400 mt-2 mb-4">
+              for {currentDeviceName}
+            </p>
+          )
+        }
+
         <p class="text-xl text-zinc-300 mb-8 max-w-2xl">
-          Find the best game deals for Steam Deck, ROG Ally, and handheld gaming
-          PCs with verified compatibility.
+          {heroDescription}
         </p>
 
-        <!-- Mission Stats -->
         <MissionStats
           activeDeals={missionStats.activeDeals}
           newVerified={missionStats.newVerified}
@@ -48,7 +110,6 @@ const [dealOfDay, verifiedDeals, batterySavers, topDiscounts, missionStats] =
       </div>
     </section>
 
-    <!-- Deal of the Day -->
     {
       dealOfDay && dealOfDay.game_id && (
         <section class="container mx-auto px-4 py-16">
@@ -57,20 +118,22 @@ const [dealOfDay, verifiedDeals, batterySavers, topDiscounts, missionStats] =
       )
     }
 
-    <!-- Active Missions -->
+    <!-- Verified -->
     <section class="container mx-auto px-4 py-16">
       <div class="flex items-center justify-between mb-6">
         <div>
-          <h2 class="text-4xl font-bold">🎯 ACTIVE MISSIONS</h2>
-          <p class="text-sm text-zinc-400 mt-1">Verified deals ending soon</p>
+          <h2 class="text-4xl font-bold">{sectionTitle}</h2>
+          <p class="text-sm text-zinc-400 mt-1">{sectionSubtitle}</p>
         </div>
+
         <a
-          href="/browse?filter=verified"
+          href={verifiedUrl}
           class="inline-flex items-center gap-1 px-3 py-1.5 border border-blue-600 text-blue-400 hover:bg-blue-600/10 rounded-lg text-sm font-medium transition-colors"
         >
           View All →
         </a>
       </div>
+
       {
         verifiedDeals.length > 0 ? (
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
@@ -79,7 +142,7 @@ const [dealOfDay, verifiedDeals, batterySavers, topDiscounts, missionStats] =
                 deal.game_id && (
                   <GameCard
                     game={deal.game_id}
-                    showDeal={true}
+                    showDeal
                     dealDiscount={deal.discount_percent}
                     dealPrice={deal.price}
                     dealStore={deal.store}
@@ -89,15 +152,12 @@ const [dealOfDay, verifiedDeals, batterySavers, topDiscounts, missionStats] =
             )}
           </div>
         ) : (
-          <EmptyState
-            title="No featured deals right now"
-            message="Check back soon for verified Steam Deck deals!"
-          />
+          <EmptyState title={emptyTitle} message={emptyMessage} />
         )
       }
     </section>
 
-    <!-- Long-Haul Ops -->
+    <!-- Battery -->
     {
       batterySavers.length > 0 && (
         <section class="bg-zinc-900/30 border-y border-zinc-800">
@@ -105,24 +165,24 @@ const [dealOfDay, verifiedDeals, batterySavers, topDiscounts, missionStats] =
             <div class="flex items-center justify-between mb-6">
               <div>
                 <h2 class="text-4xl font-bold">🔋 LONG-HAUL OPS</h2>
-                <p class="text-sm text-zinc-400 mt-1">
-                  Marathon sessions, minimal charging
-                </p>
+                <p class="text-sm text-zinc-400 mt-1">{batterySubtitle}</p>
               </div>
+
               <a
-                href="/browse?filter=battery-savers"
+                href={batteryUrl}
                 class="inline-flex items-center gap-1 px-3 py-1.5 border border-blue-600 text-blue-400 hover:bg-blue-600/10 rounded-lg text-sm font-medium transition-colors"
               >
                 View All →
               </a>
             </div>
+
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
               {batterySavers.map(
                 (deal: any) =>
                   deal.game_id && (
                     <GameCard
                       game={deal.game_id}
-                      showDeal={true}
+                      showDeal
                       dealDiscount={deal.discount_percent}
                       dealPrice={deal.price}
                       dealStore={deal.store}
@@ -136,20 +196,22 @@ const [dealOfDay, verifiedDeals, batterySavers, topDiscounts, missionStats] =
       )
     }
 
-    <!-- Legendary Loot -->
+    <!-- Discounts -->
     <section class="container mx-auto px-4 py-16">
       <div class="flex items-center justify-between mb-6">
         <div>
           <h2 class="text-4xl font-bold">💰 LEGENDARY LOOT</h2>
-          <p class="text-sm text-zinc-400 mt-1">Epic deals, some trade-offs</p>
+          <p class="text-sm text-zinc-400 mt-1">{discountSubtitle}</p>
         </div>
+
         <a
-          href="/browse?filter=top-discounts"
+          href={discountsUrl}
           class="inline-flex items-center gap-1 px-3 py-1.5 border border-blue-600 text-blue-400 hover:bg-blue-600/10 rounded-lg text-sm font-medium transition-colors"
         >
           View All →
         </a>
       </div>
+
       {
         topDiscounts.length > 0 ? (
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
@@ -158,7 +220,7 @@ const [dealOfDay, verifiedDeals, batterySavers, topDiscounts, missionStats] =
                 deal.game_id && (
                   <GameCard
                     game={deal.game_id}
-                    showDeal={true}
+                    showDeal
                     dealDiscount={deal.discount_percent}
                     dealPrice={deal.price}
                     dealStore={deal.store}

@@ -1,28 +1,48 @@
 import { directus, readItems, type Game, type Deal } from './directus';
 
+type DeviceType = 'all' | 'steam_deck' | 'rog_ally' | 'legion_go';
+
 /**
- * Get Deal of the Day
- * Priority: Highest discount with Deck Verified status
+ * Get Deal of the Day (v3.0 - device-aware)
+ * Priority: Editorial override > Highest discount with device compatibility
  */
-export async function getDealOfTheDay() {
+export async function getDealOfTheDay(device: DeviceType = 'all') {
   try {
+    // TODO: Check editorial_overrides for force_deal_of_day when collection exists
+
     const deals: any = await directus.request(
       readItems('deals', {
         filter: {
-          discount_percent: { _gte: 60 }  // Only big discounts for DOTD
+          discount_percent: { _gte: 60 }  // Big discounts only
         } as any,
         sort: ['-discount_percent'],
-        limit: 10,
+        limit: 50,
         fields: ['*', { game_id: ['*'] }] as any
       })
     );
 
-    // Prefer Deck Verified games
-    const verifiedDeal = deals.find((d: any) =>
-      d.game_id && d.game_id.deck_status === 'verified'
-    );
+    // Filter by device compatibility
+    const compatibleDeals = deals.filter((d: any) => {
+      if (!d.game_id || !d.game_id.device_performance) return false;
 
-    return verifiedDeal || deals[0] || null;
+      if (device === 'all') return true;
+
+      const devicePerf = d.game_id.device_performance[device];
+      if (!devicePerf) return false;
+
+      // Must be at least playable
+      return ['excellent', 'good', 'playable'].includes(devicePerf.status);
+    });
+
+    // Prefer Deck Verified for 'all'
+    if (device === 'all') {
+      const verifiedDeal = compatibleDeals.find((d: any) =>
+        d.game_id && d.game_id.deck_status === 'verified'
+      );
+      if (verifiedDeal) return verifiedDeal;
+    }
+
+    return compatibleDeals[0] || deals[0] || null;
   } catch (error) {
     console.error('Error fetching Deal of the Day:', error);
     return null;
@@ -30,10 +50,11 @@ export async function getDealOfTheDay() {
 }
 
 /**
- * Get Deck Verified Deals
- * Games confirmed to work well on Steam Deck
+ * Get Deck Verified Deals (v3.0 - device-aware)
+ * For specific device: excellent status
+ * For 'all': verified/playable deck_status
  */
-export async function getDeckVerifiedDeals(limit = 12) {
+export async function getDeckVerifiedDeals(limit = 12, device: DeviceType = 'all') {
   try {
     const deals: any = await directus.request(
       readItems('deals', {
@@ -41,21 +62,30 @@ export async function getDeckVerifiedDeals(limit = 12) {
           discount_percent: { _gt: 0 }
         } as any,
         sort: ['-discount_percent'],
-        limit: 100,  // Fetch more, filter in JS
+        limit: 100,
         fields: ['*', { game_id: ['*'] }] as any
       })
     );
 
-    // Filter in JavaScript instead of Directus query
-    const verifiedDeals = deals
-      .filter((d: any) =>
+    let filtered;
+
+    if (device === 'all') {
+      // Show Deck verified/playable
+      filtered = deals.filter((d: any) =>
         d.game_id &&
         d.game_id.deck_status &&
         ['verified', 'playable'].includes(d.game_id.deck_status)
-      )
-      .slice(0, limit);
+      );
+    } else {
+      // Show excellent performance on selected device
+      filtered = deals.filter((d: any) => {
+        if (!d.game_id || !d.game_id.device_performance) return false;
+        const devicePerf = d.game_id.device_performance[device];
+        return devicePerf && devicePerf.status === 'excellent';
+      });
+    }
 
-    return verifiedDeals;
+    return filtered.slice(0, limit);
   } catch (error) {
     console.error('Error fetching Deck Verified deals:', error);
     return [];
@@ -63,10 +93,10 @@ export async function getDeckVerifiedDeals(limit = 12) {
 }
 
 /**
- * Get Battery Saver Deals
- * Games with 4+ hours battery life on Steam Deck
+ * Get Battery Saver Deals (v3.0 - device-specific)
+ * Games with 5+ hours battery on selected device
  */
-export async function getBatterySaverDeals(limit = 12) {
+export async function getBatterySaverDeals(limit = 12, device: DeviceType = 'steam_deck') {
   try {
     const deals: any = await directus.request(
       readItems('deals', {
@@ -74,19 +104,21 @@ export async function getBatterySaverDeals(limit = 12) {
           discount_percent: { _gt: 0 }
         } as any,
         sort: ['-discount_percent'],
-        limit: 100,  // Fetch many, filter by battery
+        limit: 100,
         fields: ['*', { game_id: ['*'] }] as any
       })
     );
 
-    // Filter by Steam Deck battery >= 4 hours
+    // Default to Steam Deck if 'all' selected
+    const targetDevice = device === 'all' ? 'steam_deck' : device;
+
     const batterySavers = deals.filter((d: any) => {
       if (!d.game_id || !d.game_id.device_performance) return false;
 
-      const deckPerf = d.game_id.device_performance.steam_deck;
-      if (!deckPerf || !deckPerf.battery_hours) return false;
+      const devicePerf = d.game_id.device_performance[targetDevice];
+      if (!devicePerf || !devicePerf.battery_hours) return false;
 
-      return deckPerf.battery_hours >= 4.0;
+      return devicePerf.battery_hours >= 5.0;
     });
 
     return batterySavers.slice(0, limit);
@@ -97,23 +129,38 @@ export async function getBatterySaverDeals(limit = 12) {
 }
 
 /**
- * Get Top Discount Deals
- * Highest discounts regardless of compatibility
+ * Get Top Discount Deals (v3.0 - device-aware)
+ * Highest discounts that work on selected device
  */
-export async function getTopDiscountDeals(limit = 12) {
+export async function getTopDiscountDeals(limit = 12, device: DeviceType = 'all') {
   try {
     const deals: any = await directus.request(
       readItems('deals', {
         filter: {
-          discount_percent: { _gte: 50 }  // 50%+ discounts only
+          discount_percent: { _gte: 50 }
         } as any,
         sort: ['-discount_percent'],
-        limit,
+        limit: 100,
         fields: ['*', { game_id: ['*'] }] as any
       })
     );
 
-    return deals.filter((d: any) => d.game_id);
+    if (device === 'all') {
+      return deals.slice(0, limit);
+    }
+
+    // Filter by device compatibility
+    const compatible = deals.filter((d: any) => {
+      if (!d.game_id || !d.game_id.device_performance) return true; // Include unknowns
+
+      const devicePerf = d.game_id.device_performance[device];
+      if (!devicePerf) return true;
+
+      // Exclude poor/untested
+      return !['poor', 'untested'].includes(devicePerf.status);
+    });
+
+    return compatible.slice(0, limit);
   } catch (error) {
     console.error('Error fetching Top Discount deals:', error);
     return [];
@@ -121,7 +168,7 @@ export async function getTopDiscountDeals(limit = 12) {
 }
 
 /**
- * Get Mission Stats for homepage
+ * Get Mission Stats (updated for v3.0)
  */
 export async function getMissionStats() {
   try {
@@ -144,20 +191,17 @@ export async function getMissionStats() {
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
 
-    // Active deals (not expired)
     const activeDeals = (deals as any[]).filter((d: any) => {
-      if (!d.expires_at) return true; // No expiry = always active
+      if (!d.expires_at) return true;
       return new Date(d.expires_at) > today;
     }).length;
 
-    // New verified games this week
     const newVerified = (games as any[]).filter((g: any) =>
       g.deck_status === 'verified' &&
       g.date_updated &&
       new Date(g.date_updated) >= weekAgo
     ).length;
 
-    // Total potential savings
     const potentialSavings = (deals as any[]).reduce((sum: number, d: any) =>
       sum + (d.normal_price - d.price), 0
     );
@@ -178,59 +222,25 @@ export async function getMissionStats() {
 }
 
 /**
- * Helper: Get average battery life for a game
+ * Helper: Get device-specific battery life
  */
-export function getAverageBatteryLife(game: Game): number | null {
+export function getDeviceBattery(
+  game: Game,
+  device: 'steam_deck' | 'rog_ally' | 'legion_go'
+): number | null {
   if (!game.device_performance) return null;
-
-  const batteries: number[] = [];
-
-  if (game.device_performance.steam_deck?.battery_hours) {
-    batteries.push(game.device_performance.steam_deck.battery_hours);
-  }
-  if (game.device_performance.rog_ally?.battery_hours) {
-    batteries.push(game.device_performance.rog_ally.battery_hours);
-  }
-  if (game.device_performance.legion_go?.battery_hours) {
-    batteries.push(game.device_performance.legion_go.battery_hours);
-  }
-
-  if (batteries.length === 0) return null;
-
-  return batteries.reduce((sum, b) => sum + b, 0) / batteries.length;
+  const devicePerf = game.device_performance[device];
+  return devicePerf?.battery_hours || null;
 }
 
 /**
- * Helper: Get best performing device for a game
+ * Helper: Get device performance status
  */
-export function getBestDevice(game: Game): 'steam_deck' | 'rog_ally' | 'legion_go' | null {
-  if (!game.device_performance) return null;
-
-  const devices = [
-    { name: 'steam_deck' as const, perf: game.device_performance.steam_deck },
-    { name: 'rog_ally' as const, perf: game.device_performance.rog_ally },
-    { name: 'legion_go' as const, perf: game.device_performance.legion_go }
-  ];
-
-  // Filter untested/poor devices
-  const viable = devices.filter(d =>
-    d.perf && ['excellent', 'good', 'playable'].includes(d.perf.status)
-  );
-
-  if (viable.length === 0) return null;
-
-  // Sort by FPS if available, otherwise by battery
-  viable.sort((a, b) => {
-    const aFps = a.perf?.fps_avg || 0;
-    const bFps = b.perf?.fps_avg || 0;
-
-    if (aFps !== bFps) return bFps - aFps;
-
-    const aBatt = a.perf?.battery_hours || 0;
-    const bBatt = b.perf?.battery_hours || 0;
-
-    return bBatt - aBatt;
-  });
-
-  return viable[0].name;
+export function getDeviceStatus(
+  game: Game,
+  device: 'steam_deck' | 'rog_ally' | 'legion_go'
+): string {
+  if (!game.device_performance) return 'untested';
+  const devicePerf = game.device_performance[device];
+  return devicePerf?.status || 'untested';
 }
