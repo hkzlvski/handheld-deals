@@ -1,115 +1,168 @@
+/**
+ * HANDHELD DEALS - CLEANUP OLD DEALS SCRIPT
+ * 
+ * Removes expired deals and orphaned deal records.
+ * 
+ * Features:
+ * - Delete deals where expires_at is in the past
+ * - Clean orphaned deals (game no longer exists)
+ * - Log deletion counts for monitoring
+ * 
+ * Schedule: Daily at 4 AM
+ * Cron: 0 4 * * *
+ * 
+ * Usage: node scripts/cleanup-old-deals.js
+ */
+
 require('dotenv').config();
-const axios = require('axios');
-const { Logger } = require('./utils/logger');
+const { createDirectus, rest, readItems, deleteItems, authentication } = require('@directus/sdk');
 
-const logger = new Logger('cleanup-old-deals');
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
 
-let directusToken = null;
+const DIRECTUS_URL = process.env.DIRECTUS_API_URL || 'http://localhost:8055';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
-async function getDirectusToken() {
-  if (directusToken) return directusToken;
-  
-  try {
-    const response = await axios.post(`${process.env.DIRECTUS_API_URL}/auth/login`, {
-      email: process.env.DIRECTUS_ADMIN_EMAIL,
-      password: process.env.DIRECTUS_ADMIN_PASSWORD
-    });
-    
-    directusToken = response.data.data.access_token;
-    logger.success('Connected to Directus');
-    return directusToken;
-  } catch (error) {
-    logger.error('Failed to authenticate with Directus', error);
-    throw error;
-  }
-}
+// ============================================================================
+// DIRECTUS CLIENT
+// ============================================================================
 
-async function directusRequest(method, endpoint, data = null) {
-  const token = await getDirectusToken();
-  const config = {
-    method,
-    url: `${process.env.DIRECTUS_API_URL}${endpoint}`,
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    }
-  };
-  
-  if (data) {
-    config.data = data;
-  }
-  
-  const response = await axios(config);
-  return response.data;
-}
+const directus = createDirectus(DIRECTUS_URL)
+  .with(authentication('json'))
+  .with(rest());
+
+// ============================================================================
+// MAIN SCRIPT
+// ============================================================================
 
 async function cleanupOldDeals() {
-  logger.info('🧹 Cleaning up old deals...');
-  
+  console.log('🧹 CLEANUP OLD DEALS STARTING...\n');
+  console.log(`📡 Connecting to Directus: ${DIRECTUS_URL}\n`);
+
   try {
-    await getDirectusToken();
-    
-    // Calculate cutoff date (7 days ago)
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - 7);
-    const cutoffISO = cutoffDate.toISOString();
-    
-    logger.info(`Removing deals not checked since: ${cutoffISO}`);
-    
-    // Find old deals
-    const filter = {
-      last_checked: {
-        _lt: cutoffISO
-      }
-    };
-    
-    const dealsResult = await directusRequest(
-      'GET',
-      `/items/deals?filter=${JSON.stringify(filter)}&limit=-1`
+    // Login
+    console.log('🔐 Logging in to Directus...');
+    await directus.login(ADMIN_EMAIL, ADMIN_PASSWORD);
+    console.log('✅ Logged in successfully!\n');
+
+    let totalDeleted = 0;
+
+    // ========================================================================
+    // 1. DELETE EXPIRED DEALS
+    // ========================================================================
+
+    console.log('🗑️  Step 1: Deleting expired deals...\n');
+
+    const now = new Date().toISOString();
+
+    // Find expired deals
+    const expiredDeals = await directus.request(
+      readItems('deals', {
+        filter: {
+          _and: [
+            { expires_at: { _nnull: true } },  // Has expiration date
+            { expires_at: { _lt: now } }       // Expired
+          ]
+        },
+        fields: ['id', 'game_id', 'store', 'expires_at']
+      })
     );
-    
-    const oldDeals = dealsResult.data || [];
-    
-    logger.info(`Found ${oldDeals.length} deals to remove`);
-    
-    if (oldDeals.length === 0) {
-      logger.info('No old deals to cleanup');
-      logger.printSummary();
-      return;
+
+    console.log(`   Found ${expiredDeals.length} expired deals`);
+
+    if (expiredDeals.length > 0) {
+      // Delete expired deals
+      const expiredIds = expiredDeals.map(d => d.id);
+
+      await directus.request(
+        deleteItems('deals', expiredIds)
+      );
+
+      totalDeleted += expiredDeals.length;
+      console.log(`   ✅ Deleted ${expiredDeals.length} expired deals\n`);
+    } else {
+      console.log(`   ✓ No expired deals to delete\n`);
     }
-    
-    // Delete each deal
-    for (const deal of oldDeals) {
-      logger.incrementStat('processed');
-      
-      try {
-        await directusRequest('DELETE', `/items/deals/${deal.id}`);
-        logger.success(`Removed old deal: ${deal.id}`);
-        logger.incrementStat('created'); // Using 'created' as 'deleted' counter
-      } catch (error) {
-        logger.error(`Failed to delete deal ${deal.id}`, error);
-        logger.incrementStat('errors');
-      }
-      
-      // Small delay to avoid rate limits
-      await new Promise(resolve => setTimeout(resolve, 100));
+
+    // ========================================================================
+    // 2. DELETE ORPHANED DEALS
+    // ========================================================================
+
+    console.log('🗑️  Step 2: Deleting orphaned deals (game no longer exists)...\n');
+
+    // Get all deals
+    const allDeals = await directus.request(
+      readItems('deals', {
+        fields: ['id', 'game_id']
+      })
+    );
+
+    console.log(`   Checking ${allDeals.length} deals for orphans...`);
+
+    // Get all game IDs
+    const allGames = await directus.request(
+      readItems('games', {
+        fields: ['id']
+      })
+    );
+
+    const gameIds = new Set(allGames.map(g => g.id));
+
+    // Find orphaned deals
+    const orphanedDeals = allDeals.filter(deal => !gameIds.has(deal.game_id));
+
+    console.log(`   Found ${orphanedDeals.length} orphaned deals`);
+
+    if (orphanedDeals.length > 0) {
+      const orphanedIds = orphanedDeals.map(d => d.id);
+
+      await directus.request(
+        deleteItems('deals', orphanedIds)
+      );
+
+      totalDeleted += orphanedDeals.length;
+      console.log(`   ✅ Deleted ${orphanedDeals.length} orphaned deals\n`);
+    } else {
+      console.log(`   ✓ No orphaned deals to delete\n`);
     }
-    
-    logger.info('\n✅ Cleanup completed!');
-    logger.printSummary();
-    
+
+    // ========================================================================
+    // SUMMARY
+    // ========================================================================
+
+    console.log('='.repeat(60));
+    console.log('📊 CLEANUP SUMMARY');
+    console.log('='.repeat(60));
+    console.log(`🗑️  Total deals deleted: ${totalDeleted}`);
+    console.log(`📅 Timestamp: ${new Date().toISOString()}`);
+    console.log('='.repeat(60) + '\n');
+
+    if (totalDeleted > 0) {
+      console.log('✅ Cleanup complete! Database optimized.');
+    } else {
+      console.log('✅ Cleanup complete! No deletions needed.');
+    }
+
   } catch (error) {
-    logger.error('Fatal error during cleanup', error);
+    console.error('❌ Fatal error:', error.message);
+    console.error('Stack:', error.stack);
     process.exit(1);
   }
 }
 
-// Run the script
-cleanupOldDeals().then(() => {
-  // Ping healthchecks.io on success
-  const https = require('https');
-  https.get('https://hc-ping.com/6b953cc4-69aa-49d6-a95b-f8f0df74176e').on('error', () => {});
-}).catch((error) => {
-  console.error('Script failed:', error);
-  process.exit(1);
-});
+// ============================================================================
+// RUN SCRIPT
+// ============================================================================
+
+if (require.main === module) {
+  cleanupOldDeals()
+    .then(() => process.exit(0))
+    .catch(error => {
+      console.error('❌ Unhandled error:', error);
+      process.exit(1);
+    });
+}
+
+module.exports = { cleanupOldDeals };

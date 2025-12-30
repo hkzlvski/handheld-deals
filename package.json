@@ -4,17 +4,17 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "dependencies": {
-    "@directus/sdk": "^18.0.3",
-    "axios": "^1.13.2",
-    "directus": "^11.14.0",
-    "dotenv": "^17.2.3",
-    "pg": "^8.16.3"
+    "cron": "node scripts/cron-scheduler.js",
+    "cron:dev": "nodemon scripts/cron-scheduler.js",
+    "test:cheapshark": "node scripts/fetch-cheapshark.js",
+    "test:steam": "node scripts/sync-steam-data.js",
+    "test:protondb": "node scripts/sync-protondb.js",
+    "test:battery": "node scripts/estimate-battery.js",
+    "test:cleanup-deals": "node scripts/cleanup-old-deals.js",
+    "test:cleanup-prefs": "node scripts/cleanup-preferences.js",
+    "test:events": "node scripts/update-event-status.js",
+    "test:alerts": "node scripts/process-price-alerts.js",
+    "test:stale-reviews": "node scripts/flag-stale-reviews.js",
+    "test:stale-data": "node scripts/downgrade-stale-data.js"
   }
 }
