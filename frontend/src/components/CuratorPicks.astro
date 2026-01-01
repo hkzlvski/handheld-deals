@@ -1,0 +1,79 @@
+---
+import CuratorPickCard from "./CuratorPickCard.astro";
+
+interface Props {
+  picks: any[];
+  device?: string;
+}
+
+const { picks, device = "steam_deck" } = Astro.props;
+---
+
+<section class="py-12">
+  <!-- Header -->
+  <div class="container mx-auto px-4 mb-6">
+    <div class="flex items-end justify-between">
+      <div>
+        <h2 class="text-3xl md:text-4xl font-black text-white mb-2">
+          Editor's Picks This Week
+        </h2>
+        <p class="text-zinc-400">
+          Hand-tested on real hardware · Updated weekly
+        </p>
+      </div>
+
+      <a
+        href="/curator-picks"
+        class="hidden md:block text-sm text-blue-400 hover:text-blue-300 font-semibold"
+      >
+        View All →
+      </a>
+    </div>
+  </div>
+
+  <!-- Horizontal Scroll -->
+  <div class="relative">
+    <!-- Gradient fade left -->
+    <div
+      class="hidden md:block absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-zinc-950 to-transparent z-10 pointer-events-none"
+    >
+    </div>
+
+    <!-- Gradient fade right -->
+    <div
+      class="hidden md:block absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-zinc-950 to-transparent z-10 pointer-events-none"
+    >
+    </div>
+
+    <!-- Scroll container -->
+    <div
+      class="overflow-x-auto scrollbar-hide"
+      style="scroll-behavior: smooth; -webkit-overflow-scrolling: touch;"
+    >
+      <div class="flex gap-4 px-4 md:px-6 pb-4 md:justify-center">
+        {picks.map((pick) => <CuratorPickCard pick={pick} device={device} />)}
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile "View All" -->
+  <div class="md:hidden container mx-auto px-4 mt-4">
+    <a
+      href="/curator-picks"
+      class="block text-center py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-white font-semibold transition-colors"
+    >
+      View All Picks →
+    </a>
+  </div>
+</section>
+
+<style>
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+</style>

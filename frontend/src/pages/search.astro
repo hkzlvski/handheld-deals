@@ -1,0 +1,175 @@
+---
+import Layout from '../layouts/Layout.astro';
+import DealCard from '../components/DealCard.astro';
+import { searchGames } from '../lib/api';
+
+const query = Astro.url.searchParams.get('q') || '';
+const device = Astro.locals.device || 'all';
+
+// Fetch search results
+let results: any[] = [];
+let searchPerformed = false;
+
+if (query && query.trim().length >= 2) {
+  searchPerformed = true;
+  results = await searchGames(query, device, 50); // More results on dedicated page
+}
+
+const title = query 
+  ? `Search Results for "${query}"` 
+  : 'Search Games';
+
+const description = query
+  ? `Found ${results.length} games matching "${query}"`
+  : 'Search for handheld-compatible game deals';
+---
+
+<Layout title={title} description={description}>
+  <div class="min-h-screen bg-black">
+    <div class="container mx-auto px-4 py-8">
+      <!-- Breadcrumb -->
+      <nav class="text-sm text-zinc-500 mb-6">
+        <a href="/" class="hover:text-blue-400 transition-colors">Home</a>
+        <span class="mx-2">›</span>
+        <span class="text-white">Search</span>
+        {query && (
+          <>
+            <span class="mx-2">›</span>
+            <span class="text-white">"{query}"</span>
+          </>
+        )}
+      </nav>
+
+      <!-- Search Header -->
+      <div class="mb-8">
+        <h1 class="text-3xl md:text-4xl font-black text-white mb-2">
+          {query ? (
+            <>Search Results for "<span class="text-blue-400">{query}</span>"</>
+          ) : (
+            'Search Games'
+          )}
+        </h1>
+        {searchPerformed && (
+          <p class="text-zinc-400">
+            {results.length === 0 ? (
+              'No games found'
+            ) : results.length === 1 ? (
+              '1 game found'
+            ) : (
+              `${results.length} games found`
+            )}
+            {device !== 'all' && (
+              <span>
+                {' '}· Compatible with <span class="capitalize">{device.replace('_', ' ')}</span>
+              </span>
+            )}
+          </p>
+        )}
+      </div>
+
+      <!-- Results Grid -->
+      {searchPerformed ? (
+        results.length > 0 ? (
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {results.map((game) => (
+              game.best_deal ? (
+                <DealCard
+                  deal={{
+                    ...game.best_deal,
+                    game_id: game,
+                  }}
+                  device={device}
+                />
+              ) : (
+                <a
+                  href={`/game/${game.slug}`}
+                  class="group block bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-700 transition-all"
+                >
+                  <div class="aspect-[3/4] bg-zinc-800">
+                    {game.cover_image_url ? (
+                      <img
+                        src={game.cover_image_url}
+                        alt={game.title}
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div class="w-full h-full flex items-center justify-center text-zinc-600">
+                        No image
+                      </div>
+                    )}
+                  </div>
+                  <div class="p-3">
+                    <h3 class="font-semibold text-white text-sm line-clamp-2 group-hover:text-blue-400 transition-colors">
+                      {game.title}
+                    </h3>
+                    <p class="text-xs text-zinc-500 mt-1">No active deals</p>
+                  </div>
+                </a>
+              )
+            ))}
+          </div>
+        ) : (
+          <!-- Empty State -->
+          <div class="text-center py-16">
+            <div class="text-6xl mb-4">🔍</div>
+            <h2 class="text-2xl font-bold text-white mb-2">
+              No games found matching "{query}"
+            </h2>
+            <p class="text-zinc-400 mb-6 max-w-md mx-auto">
+              Try different keywords or browse our collections to find great deals.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-3 justify-center">
+              <a
+                href="/browse"
+                class="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
+              >
+                Browse All Deals
+              </a>
+              <a
+                href="/"
+                class="inline-block px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-white font-semibold rounded-lg transition-colors"
+              >
+                Back to Home
+              </a>
+            </div>
+          </div>
+        )
+      ) : (
+        <!-- No Search Performed -->
+        <div class="text-center py-16">
+          <div class="text-6xl mb-4">🎮</div>
+          <h2 class="text-2xl font-bold text-white mb-2">
+            Start Searching
+          </h2>
+          <p class="text-zinc-400 mb-6 max-w-md mx-auto">
+            Use the search bar above to find compatible games for your handheld device.
+          </p>
+          <p class="text-sm text-zinc-500">
+            <kbd class="px-2 py-1 bg-zinc-800 rounded border border-zinc-700">⌘K</kbd>
+            {' '}or{' '}
+            <kbd class="px-2 py-1 bg-zinc-800 rounded border border-zinc-700">Ctrl+K</kbd>
+            {' '}to focus search
+          </p>
+        </div>
+      )}
+
+      <!-- Suggestions (if no results) -->
+      {searchPerformed && results.length === 0 && (
+        <div class="mt-12">
+          <h3 class="text-xl font-bold text-white mb-4">Popular Searches</h3>
+          <div class="flex flex-wrap gap-2">
+            {['Hades', 'Celeste', 'Hollow Knight', 'Stardew Valley', 'Vampire Survivors', 'Dead Cells'].map((suggestion) => (
+              <a
+                href={`/search?q=${encodeURIComponent(suggestion)}`}
+                class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm transition-colors"
+              >
+                {suggestion}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+</Layout>

@@ -1,0 +1,38 @@
+/* Device-specific gradient backgrounds - SUBTLE */
+.gradient-deck-hero {
+  background: linear-gradient(135deg,
+      #0a0a0a 0%,
+      #1a1a2e 50%,
+      #0a0a0a 100%);
+}
+
+.gradient-ally-hero {
+  background: linear-gradient(135deg,
+      #0a0a0a 0%,
+      #2a1a1a 50%,
+      #0a0a0a 100%);
+}
+
+.gradient-legion-hero {
+  background: linear-gradient(135deg,
+      #0a0a0a 0%,
+      #1a1a2a 50%,
+      #0a0a0a 100%);
+}
+
+.gradient-animated {
+  background-size: 200% 200%;
+  animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+}

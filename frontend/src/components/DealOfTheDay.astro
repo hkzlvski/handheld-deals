@@ -1,205 +1,295 @@
 ---
+import Badge from "./Badge.astro";
+import { getDeviceName } from "../lib/helpers";
+
 interface Props {
   deal: any;
+  device?: string;
 }
 
-const { deal } = Astro.props;
+const { deal, device = "steam_deck" } = Astro.props;
 const game = deal.game_id;
+const deviceName = getDeviceName(device);
 
-function getDeckBadgeColor(status: string): string {
-  const colors: Record<string, string> = {
-    verified: "badge-verified",
-    playable: "badge-playable",
-    unsupported: "badge-unsupported",
-    unknown: "bg-zinc-800 text-zinc-400",
+// Device-specific performance data
+function getDevicePerformance(game: any, device: string) {
+  const perfData = game.device_performance?.[device];
+  if (!perfData) return null;
+
+  return {
+    fps: perfData.fps_avg,
+    battery: perfData.battery_hours,
+    status: perfData.status,
+    estimated: perfData.estimated,
   };
-  return colors[status] || colors.unknown;
 }
 
-const whyItWorksPoints = [];
+const perf = getDevicePerformance(game, device);
 
-if (game.deck_status === "verified") {
-  whyItWorksPoints.push({
-    icon: "✅",
-    text: "Steam Deck Verified - works perfectly",
+// Curator storytelling points
+const storyPoints: { icon: string; text: string; type: string }[] = [];
+
+if (perf?.status === "excellent") {
+  storyPoints.push({
+    icon: "⚡",
+    text: `Runs excellently on ${deviceName}`,
+    type: "positive",
+  });
+}
+
+if (perf?.fps && perf.fps >= 60) {
+  storyPoints.push({
+    icon: "🎯",
+    text: `Smooth ${perf.fps} FPS${perf.estimated ? " (estimated)" : ""}`,
+    type: "positive",
+  });
+}
+
+if (perf?.battery && perf.battery >= 5) {
+  storyPoints.push({
+    icon: "🔋",
+    text: `${perf.battery}h battery – marathon sessions`,
+    type: "positive",
   });
 }
 
 if (game.controller_support === "full") {
-  whyItWorksPoints.push({ icon: "✅", text: "Full controller support" });
-}
-
-if (game.battery_drain === "low") {
-  whyItWorksPoints.push({
-    icon: "✅",
-    text: "Low battery drain - expect 5-7 hours",
+  storyPoints.push({
+    icon: "🎮",
+    text: "Perfect controller support",
+    type: "positive",
   });
 }
 
 if (game.offline_playable) {
-  whyItWorksPoints.push({
-    icon: "✅",
-    text: "Works offline - perfect for travel",
+  storyPoints.push({
+    icon: "✈️",
+    text: "Works offline – perfect for travel",
+    type: "positive",
   });
 }
 
-if (game.cloud_save) {
-  whyItWorksPoints.push({ icon: "✅", text: "Cloud saves enabled" });
-}
-
 if (game.launcher && game.launcher !== "steam") {
-  whyItWorksPoints.push({
+  storyPoints.push({
     icon: "⚠️",
     text: `Requires ${game.launcher.toUpperCase()} launcher`,
+    type: "warning",
   });
 }
 
 if (game.small_text_warning) {
-  whyItWorksPoints.push({ icon: "⚠️", text: 'Small UI text on 7" screen' });
+  storyPoints.push({
+    icon: "⚠️",
+    text: `Small UI text on ${deviceName}`,
+    type: "warning",
+  });
 }
 
-if (game.always_online) {
-  whyItWorksPoints.push({ icon: "⚠️", text: "Requires internet connection" });
+if (storyPoints.length === 0) {
+  storyPoints.push({
+    icon: "💎",
+    text: "Great deal on a quality game",
+    type: "positive",
+  });
 }
 
-if (whyItWorksPoints.length === 0) {
-  whyItWorksPoints.push({ icon: "✅", text: "Great deal on quality game" });
+// Smart urgency timer (only show < 72h)
+function getSmartTimer(expiresAt: string | null) {
+  if (!expiresAt) return null;
+
+  const diff = new Date(expiresAt).getTime() - Date.now();
+  if (diff <= 0) return { text: "EXPIRED", type: "expired" };
+
+  const hoursLeft = Math.floor(diff / 36e5);
+
+  // > 72h: "Limited time deal" (low urgency)
+  if (hoursLeft > 72) {
+    return { text: "Limited time deal", type: "low" };
+  }
+
+  // < 72h but > 24h: "X days left" (medium urgency)
+  const daysLeft = Math.floor(hoursLeft / 24);
+  if (daysLeft > 1) {
+    return { text: `${daysLeft} days left`, type: "medium" };
+  }
+
+  // < 24h but > 1h: "X hours left" (high urgency)
+  if (hoursLeft > 1) {
+    return { text: `${hoursLeft} hours left`, type: "high" };
+  }
+
+  // < 1h: "ENDING SOON!" (critical)
+  return { text: "ENDING SOON!", type: "critical" };
 }
+
+const timer = getSmartTimer(deal.expires_at);
 ---
 
-<article
-  class="relative overflow-hidden rounded-xl bg-gradient-to-br from-deck-orange/20 via-zinc-900 to-purple-900/20 border-2 border-deck-orange/50 p-1 max-w-4xl mx-auto"
->
-  <div class="bg-zinc-950 rounded-lg p-6 md:p-8">
-    <!-- Badges Row with Micro-Signals -->
-    <div class="flex flex-wrap items-center gap-2 mb-3">
-      <span
-        class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-deck-orange text-zinc-950 rounded-full text-xs font-bold uppercase tracking-wide"
-      >
-        🔥 Deal of the Day
-      </span>
+<article class="relative">
+  <div
+    class="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-purple-600/10 rounded-2xl blur-xl"
+  >
+  </div>
 
-      {
-        deal.is_historical_low && (
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-600 text-white rounded-full text-xs font-bold">
-            💎 Historical Low
-          </span>
-        )
-      }
+  <div
+    class="relative bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 rounded-2xl overflow-hidden"
+  >
+    <!-- Header -->
+    <div
+      class="bg-gradient-to-r from-zinc-900 to-zinc-800 px-6 py-4 border-b border-zinc-700"
+    >
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div class="flex items-center gap-3">
+          <Badge variant="featured" size="lg" icon="🎯">
+            DEAL OF THE DAY
+          </Badge>
 
-      {
-        deal.is_historical_low && (
-          <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-red-900/50 text-red-400 border border-red-800 rounded-full text-xs">
-            🔥 Lowest in 12 months
-          </span>
-        )
-      }
+          {
+            deal.is_historical_low && (
+              <Badge variant="historical_low" size="sm" icon="💎">
+                ALL-TIME LOW
+              </Badge>
+            )
+          }
+        </div>
 
-      {
-        deal.expires_at && (
-          <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-900/50 text-orange-400 border border-orange-800 rounded-full text-xs">
-            ⏱ Expires soon
-          </span>
-        )
-      }
+        {
+          timer && timer.type === "low" && (
+            <Badge variant="timer_low" size="sm" icon="⏱">
+              {timer.text}
+            </Badge>
+          )
+        }
+        {
+          timer && timer.type === "medium" && (
+            <Badge variant="timer_medium" size="sm" icon="⏱">
+              {timer.text}
+            </Badge>
+          )
+        }
+        {
+          timer && timer.type === "high" && (
+            <Badge variant="timer_high" size="sm" icon="⏱">
+              {timer.text}
+            </Badge>
+          )
+        }
+        {
+          timer && timer.type === "critical" && (
+            <Badge variant="timer_critical" size="sm" icon="⏱">
+              {timer.text}
+            </Badge>
+          )
+        }
+      </div>
     </div>
 
-    <div class="grid md:grid-cols-[240px_1fr] gap-5 items-start">
-      <div class="relative group">
+    <!-- Content -->
+    <div class="grid md:grid-cols-[280px_1fr] gap-8 p-6 md:p-8">
+      <!-- Cover -->
+      <div class="relative">
         <div
-          class="aspect-[3/4] rounded-lg overflow-hidden bg-zinc-800 shadow-xl"
+          class="aspect-[3/4] rounded-xl overflow-hidden bg-zinc-800 shadow-2xl group"
         >
           {
             game.cover_image_url ? (
               <img
                 src={game.cover_image_url}
                 alt={game.title}
-                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
             ) : (
-              <div class="w-full h-full flex items-center justify-center text-5xl">
+              <div class="w-full h-full flex items-center justify-center text-6xl">
                 🎮
               </div>
             )
           }
-        </div>
 
-        <div
-          class="absolute top-2 right-2 bg-deck-orange text-zinc-950 px-2.5 py-1 rounded-lg font-bold text-lg shadow-lg"
-        >
-          -{deal.discount_percent}%
+          <!-- Discount Badge (custom positioned) -->
+          <div class="absolute -top-2 -right-2 rotate-3">
+            <Badge variant="discount_large" size="xl">
+              -{deal.discount_percent}%
+            </Badge>
+          </div>
         </div>
       </div>
 
-      <div class="space-y-3">
+      <!-- Info -->
+      <div class="space-y-6">
         <div>
-          <h2
-            class="text-4xl md:text-5xl font-bold text-zinc-50 mb-3 leading-tight"
-          >
+          <h2 class="text-4xl md:text-5xl font-bold text-white mb-2">
             {game.title}
           </h2>
-
-          <div class="flex flex-wrap gap-1.5 mb-2">
-            <span
-              class={`badge text-xs ${getDeckBadgeColor(game.deck_status)}`}
-            >
-              {game.deck_status === "verified" && "✓ Verified"}
-              {game.deck_status === "playable" && "⚠ Playable"}
-              {game.deck_status === "unsupported" && "✗ Unsupported"}
-              {game.deck_status === "unknown" && "? Unknown"}
-            </span>
-
+          <!-- FIX 1: Device-aware copy (already implemented) -->
+          <p class="text-zinc-400 text-sm">
             {
-              game.controller_support === "full" && (
-                <span class="badge bg-blue-900/50 text-blue-400 text-xs">
-                  🎮 Full Controller
-                </span>
-              )
+              device === "all"
+                ? "Compatible with all handheld PCs"
+                : `Verified on ${deviceName}`
             }
-
-            {
-              game.battery_drain === "low" && (
-                <span class="badge bg-green-900/50 text-green-400 text-xs">
-                  🔋 Low Power
-                </span>
-              )
-            }
-
-            {
-              game.offline_playable && (
-                <span class="badge bg-purple-900/50 text-purple-400 text-xs">
-                  ✈️ Offline
-                </span>
-              )
-            }
-          </div>
+          </p>
         </div>
 
-        <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-3">
-          <h3 class="text-sm font-bold text-zinc-50 mb-2">
-            🎯 Why This Works on Handhelds
+        {
+          perf && (
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {perf.fps && (
+                <div class="bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3">
+                  <div class="text-xs text-zinc-400">Performance</div>
+                  <div class="text-2xl font-bold">{perf.fps} FPS</div>
+                </div>
+              )}
+              {perf.battery && (
+                <div class="bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3">
+                  <div class="text-xs text-zinc-400">Battery</div>
+                  <div class="text-2xl font-bold">{perf.battery}h</div>
+                </div>
+              )}
+              {perf.status && (
+                <div class="bg-zinc-800/50 border border-zinc-700 rounded-lg px-4 py-3">
+                  <div class="text-xs text-zinc-400">Status</div>
+                  <div class="text-sm font-semibold capitalize text-green-400">
+                    {perf.status}
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        }
+
+        <!-- Story -->
+        <div class="bg-zinc-800/30 border border-zinc-700/50 rounded-xl p-5">
+          <h3 class="text-sm font-bold text-zinc-300 mb-3">
+            ✍️ Why This Works on {deviceName}
           </h3>
-          <ul class="space-y-1">
+          <ul class="space-y-2">
             {
-              whyItWorksPoints.slice(0, 4).map((point) => (
-                <li class="flex items-start gap-2 text-xs">
-                  <span class="text-sm flex-shrink-0">{point.icon}</span>
-                  <span class="text-zinc-300">{point.text}</span>
+              storyPoints.slice(0, 5).map((p) => (
+                <li class="flex gap-3 text-sm">
+                  <span>{p.icon}</span>
+                  <span
+                    class={
+                      p.type === "warning" ? "text-orange-300" : "text-zinc-300"
+                    }
+                  >
+                    {p.text}
+                  </span>
                 </li>
               ))
             }
           </ul>
         </div>
 
-        <div class="space-y-2.5">
-          <div class="flex items-baseline gap-2">
-            <span class="text-xs text-zinc-500 line-through">
+        <!-- Price + CTA -->
+        <div class="space-y-4">
+          <div class="flex items-baseline gap-3">
+            <span class="text-sm text-zinc-500 line-through">
               ${Number(deal.normal_price).toFixed(2)}
             </span>
-            <span class="text-3xl font-bold text-zinc-50 font-mono">
+            <span class="text-4xl font-black">
               ${Number(deal.price).toFixed(2)}
             </span>
-            <span class="text-lg font-bold text-green-400">
+            <span class="text-xl font-bold text-green-400">
               Save ${
                 (Number(deal.normal_price) - Number(deal.price)).toFixed(2)
               }
@@ -210,28 +300,34 @@ if (whyItWorksPoints.length === 0) {
             href={deal.url}
             target="_blank"
             rel="noopener noreferrer"
-            class="btn btn-primary w-full text-sm py-2.5 flex items-center justify-center gap-2"
             data-game-id={game.id}
-            data-game-slug={game.slug}
-            data-store={deal.store}
             data-deal-id={deal.id}
-            data-tracking="deal-of-day-cta"
+            data-store={deal.store}
+            class="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center font-bold py-4 rounded-xl transition-all hover:scale-[1.02] shadow-lg shadow-blue-900/50"
           >
-            Buy on {deal.store.charAt(0).toUpperCase() + deal.store.slice(1)} →
+            Get Deal on {
+              deal.store.charAt(0).toUpperCase() + deal.store.slice(1)
+            } →
           </a>
+        </div>
 
-          <div class="flex gap-3 text-xs text-zinc-400">
-            {
-              game.metacritic_score && (
-                <span>Metacritic: {game.metacritic_score}</span>
-              )
-            }
-            {
-              game.steam_positive_percent && (
-                <span>👍 {game.steam_positive_percent}% positive</span>
-              )
-            }
-          </div>
+        <!-- Social Proof -->
+        <div class="flex gap-4 text-xs text-zinc-400">
+          {
+            game.steam_positive_percent && (
+              <span>
+                👍 <b class="text-green-400">{game.steam_positive_percent}%</b>{" "}
+                positive
+              </span>
+            )
+          }
+          {
+            game.metacritic_score && (
+              <span>
+                📊 <b>{game.metacritic_score}</b> Metacritic
+              </span>
+            )
+          }
         </div>
       </div>
     </div>

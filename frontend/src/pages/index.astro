@@ -2,13 +2,20 @@
 export const prerender = false;
 
 import Layout from "../layouts/Layout.astro";
+import Hero from "../components/Hero.astro";
 import MissionStats from "../components/MissionStats.astro";
 import GameCard from "../components/GameCard.astro";
 import DealOfTheDay from "../components/DealOfTheDay.astro";
+import CuratorPicks from "../components/CuratorPicks.astro";
+import SocialProof from "../components/SocialProof.astro";
+import BatteryChampions from "../components/BatteryChampions.astro";
+import NewsletterCTA from "../components/NewsletterCTA.astro";
+import TopDiscounts from "../components/TopDiscounts.astro";
 import EmptyState from "../components/EmptyState.astro";
 
 import {
   getDealOfTheDay,
+  getWeeklyGems,
   getDeckVerifiedDeals,
   getBatterySaverDeals,
   getTopDiscountDeals,
@@ -17,14 +24,21 @@ import {
 
 const selectedDevice = Astro.locals.device || "all";
 
-const [dealOfDay, verifiedDeals, batterySavers, topDiscounts, missionStats] =
-  await Promise.all([
-    getDealOfTheDay(selectedDevice),
-    getDeckVerifiedDeals(12, selectedDevice),
-    getBatterySaverDeals(12, selectedDevice),
-    getTopDiscountDeals(12, selectedDevice),
-    getMissionStats(),
-  ]);
+const [
+  dealOfDay,
+  weeklyGems,
+  verifiedDeals,
+  batterySavers,
+  topDiscounts,
+  missionStats,
+] = await Promise.all([
+  getDealOfTheDay(selectedDevice),
+  getWeeklyGems(5),
+  getDeckVerifiedDeals(12, selectedDevice),
+  getBatterySaverDeals(12, selectedDevice),
+  getTopDiscountDeals(12, selectedDevice),
+  getMissionStats(),
+]);
 
 const deviceNames: Record<string, string> = {
   all: "All Devices",
@@ -40,25 +54,13 @@ const pageTitle = isSpecificDevice
   ? `Handheld Deals - Best Gaming Deals for ${currentDeviceName}`
   : "Handheld Deals - Best Gaming Deals";
 
-const heroDescription = isSpecificDevice
-  ? `Hand-tested game deals verified for ${currentDeviceName} performance and battery life.`
-  : "Find the best game deals for Steam Deck, ROG Ally, and handheld gaming PCs with verified compatibility.";
-
 const sectionTitle = isSpecificDevice
   ? `⭐ ${currentDeviceName.toUpperCase()} EXCELLENCE`
   : "🎯 ACTIVE MISSIONS";
 
 const sectionSubtitle = isSpecificDevice
   ? `Games running excellently on ${currentDeviceName}`
-  : "Verified deals ending soon";
-
-const batterySubtitle = isSpecificDevice
-  ? `5+ hours battery on ${currentDeviceName}`
-  : "Marathon sessions, minimal charging";
-
-const discountSubtitle = isSpecificDevice
-  ? `Huge discounts compatible with ${currentDeviceName}`
-  : "Epic deals, some trade-offs";
+  : "Current best deals across devices";
 
 const emptyTitle = isSpecificDevice
   ? `No ${currentDeviceName} deals right now`
@@ -71,59 +73,46 @@ const emptyMessage = isSpecificDevice
 const verifiedUrl = isSpecificDevice
   ? `/browse?filter=verified&device=${selectedDevice}`
   : "/browse?filter=verified";
-
-const batteryUrl = isSpecificDevice
-  ? `/browse?filter=battery-savers&device=${selectedDevice}`
-  : "/browse?filter=battery-savers";
-
-const discountsUrl = isSpecificDevice
-  ? `/browse?filter=top-discounts&device=${selectedDevice}`
-  : "/browse?filter=top-discounts";
 ---
 
 <Layout title={pageTitle}>
   <main class="flex-1">
     <!-- Hero -->
-    <section
-      class="bg-gradient-to-b from-zinc-900 to-zinc-950 border-b border-zinc-800"
-    >
-      <div class="container mx-auto px-4 py-16">
-        <h1 class="text-6xl md:text-7xl font-bold mb-4">🎮 Handheld Deals</h1>
+    <Hero device={selectedDevice} />
 
-        {
-          isSpecificDevice && (
-            <p class="text-3xl md:text-4xl text-blue-400 mt-2 mb-4">
-              for {currentDeviceName}
-            </p>
-          )
-        }
-
-        <p class="text-xl text-zinc-300 mb-8 max-w-2xl">
-          {heroDescription}
-        </p>
-
-        <MissionStats
-          activeDeals={missionStats.activeDeals}
-          newVerified={missionStats.newVerified}
-          potentialSavings={missionStats.potentialSavings}
-        />
-      </div>
-    </section>
-
+    <!-- Deal of the Day -->
     {
       dealOfDay && dealOfDay.game_id && (
-        <section class="container mx-auto px-4 py-16">
-          <DealOfTheDay deal={dealOfDay} />
+        <section id="deal-of-the-day" class="container mx-auto px-4 py-12">
+          <DealOfTheDay deal={dealOfDay} device={selectedDevice} />
         </section>
       )
     }
 
-    <!-- Verified -->
-    <section class="container mx-auto px-4 py-16">
+    <!-- Curator's Picks -->
+    {
+      weeklyGems?.length > 0 && (
+        <CuratorPicks picks={weeklyGems} device={selectedDevice} />
+      )
+    }
+
+    <!-- Social Proof -->
+    <SocialProof device={selectedDevice} />
+
+    <!-- Divider -->
+    <div class="container mx-auto px-4">
+      <div
+        class="w-4/5 mx-auto border-t border-zinc-700/50 bg-gradient-to-r from-transparent via-zinc-700/50 to-transparent"
+      >
+      </div>
+    </div>
+
+    <!-- Active Missions -->
+    <section id="weekly-gems" class="container mx-auto px-4 py-16">
       <div class="flex items-center justify-between mb-6">
         <div>
-          <h2 class="text-4xl font-bold">{sectionTitle}</h2>
-          <p class="text-sm text-zinc-400 mt-1">{sectionSubtitle}</p>
+          <h2 class="text-3xl font-bold">{sectionTitle}</h2>
+          <p class="text-sm text-zinc-500 mt-1">{sectionSubtitle}</p>
         </div>
 
         <a
@@ -136,7 +125,7 @@ const discountsUrl = isSpecificDevice
 
       {
         verifiedDeals.length > 0 ? (
-          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
             {verifiedDeals.map(
               (deal: any) =>
                 deal.game_id && (
@@ -147,6 +136,7 @@ const discountsUrl = isSpecificDevice
                     dealPrice={deal.price}
                     dealStore={deal.store}
                     isHistoricalLow={deal.is_historical_low}
+                    dealExpiryDate={deal.expiry_date}
                   />
                 ),
             )}
@@ -157,85 +147,21 @@ const discountsUrl = isSpecificDevice
       }
     </section>
 
-    <!-- Battery -->
+    <!-- Battery Champions -->
     {
       batterySavers.length > 0 && (
-        <section class="bg-zinc-900/30 border-y border-zinc-800">
-          <div class="container mx-auto px-4 py-16">
-            <div class="flex items-center justify-between mb-6">
-              <div>
-                <h2 class="text-4xl font-bold">🔋 LONG-HAUL OPS</h2>
-                <p class="text-sm text-zinc-400 mt-1">{batterySubtitle}</p>
-              </div>
-
-              <a
-                href={batteryUrl}
-                class="inline-flex items-center gap-1 px-3 py-1.5 border border-blue-600 text-blue-400 hover:bg-blue-600/10 rounded-lg text-sm font-medium transition-colors"
-              >
-                View All →
-              </a>
-            </div>
-
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-              {batterySavers.map(
-                (deal: any) =>
-                  deal.game_id && (
-                    <GameCard
-                      game={deal.game_id}
-                      showDeal
-                      dealDiscount={deal.discount_percent}
-                      dealPrice={deal.price}
-                      dealStore={deal.store}
-                      isHistoricalLow={deal.is_historical_low}
-                    />
-                  ),
-              )}
-            </div>
-          </div>
-        </section>
+        <BatteryChampions deals={batterySavers} device={selectedDevice} />
       )
     }
 
-    <!-- Discounts -->
-    <section class="container mx-auto px-4 py-16">
-      <div class="flex items-center justify-between mb-6">
-        <div>
-          <h2 class="text-4xl font-bold">💰 LEGENDARY LOOT</h2>
-          <p class="text-sm text-zinc-400 mt-1">{discountSubtitle}</p>
-        </div>
+    <!-- Newsletter -->
+    <NewsletterCTA device={selectedDevice} />
 
-        <a
-          href={discountsUrl}
-          class="inline-flex items-center gap-1 px-3 py-1.5 border border-blue-600 text-blue-400 hover:bg-blue-600/10 rounded-lg text-sm font-medium transition-colors"
-        >
-          View All →
-        </a>
-      </div>
-
-      {
-        topDiscounts.length > 0 ? (
-          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-            {topDiscounts.map(
-              (deal: any) =>
-                deal.game_id && (
-                  <GameCard
-                    game={deal.game_id}
-                    showDeal
-                    dealDiscount={deal.discount_percent}
-                    dealPrice={deal.price}
-                    dealStore={deal.store}
-                    isHistoricalLow={deal.is_historical_low}
-                  />
-                ),
-            )}
-          </div>
-        ) : (
-          <EmptyState
-            title="No big discounts available"
-            message="Deals refresh daily - check back tomorrow!"
-          />
-        )
-      }
-    </section>
+    <!-- Top Discounts -->
+    {
+      topDiscounts.length > 0 && (
+        <TopDiscounts deals={topDiscounts} device={selectedDevice} />
+      )
+    }
   </main>
 </Layout>

@@ -1,5 +1,8 @@
 ---
 import DeviceSwitcher from "./DeviceSwitcher.astro";
+import Search from "./Search";
+
+const device = Astro.locals.device || "all";
 
 const navLinks = [
   { href: "/browse", label: "Browse Games" },
@@ -29,7 +32,10 @@ const navLinks = [
       </div>
 
       <!-- Desktop Navigation -->
-      <div class="hidden md:flex items-center gap-6">
+      <div class="hidden md:flex items-center gap-4">
+        <!-- Search -->
+        <Search device={device} client:load />
+
         {
           navLinks.map((link) => (
             <a
@@ -42,25 +48,31 @@ const navLinks = [
         }
       </div>
 
-      <!-- Mobile Menu Button -->
-      <button
-        id="mobile-menu-button"
-        class="md:hidden p-2 text-zinc-400 hover:text-zinc-100 transition-colors"
-        aria-label="Toggle menu"
-      >
-        <svg
-          class="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+      <!-- Mobile: Search + Menu -->
+      <div class="md:hidden flex items-center gap-2">
+        <!-- Mobile Search -->
+        <Search device={device} isMobile={true} client:load />
+
+        <!-- Mobile Menu Button -->
+        <button
+          id="mobile-menu-button"
+          class="p-2 text-zinc-400 hover:text-zinc-100 transition-colors"
+          aria-label="Toggle menu"
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M4 6h16M4 12h16M4 18h16"></path>
-        </svg>
-      </button>
+          <svg
+            class="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <!-- Device Switcher (Mobile - Below Logo) -->

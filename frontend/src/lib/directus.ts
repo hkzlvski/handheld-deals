@@ -84,7 +84,8 @@ export interface Deal {
   is_historical_low: boolean;
   cheapest_price_ever: number | null;
   last_checked: string;
-  expires_at: string | null;
+  expires_at: string | null;  // Legacy field
+  expiry_date: string | null;  // NEW: Replaces expires_at
   date_created?: string;
 }
 

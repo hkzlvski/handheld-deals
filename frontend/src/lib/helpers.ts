@@ -239,3 +239,13 @@ export function getRarityGlowClass(percent: number): string {
   };
   return glows[rarity];
 }
+
+export function getDeviceName(device: string): string {
+  const names: Record<string, string> = {
+    all: 'All Devices',
+    steam_deck: 'Steam Deck',
+    rog_ally: 'ROG Ally',
+    legion_go: 'Legion Go'
+  };
+  return names[device] || 'All Devices';
+}

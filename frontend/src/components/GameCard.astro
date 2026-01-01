@@ -1,10 +1,14 @@
 ---
+import ExpirationBadge from "./ExpirationBadge.astro";
+import { isDealExpired } from "../utils/time";
+
 interface Props {
   game: any;
   showDeal?: boolean;
   dealDiscount?: number;
   dealPrice?: number;
   dealStore?: string;
+  dealExpiryDate?: string | null;
   isHistoricalLow?: boolean;
 }
 
@@ -14,8 +18,14 @@ const {
   dealDiscount = 0,
   dealPrice = 0,
   dealStore = "",
+  dealExpiryDate = null,
   isHistoricalLow = false,
 } = Astro.props;
+
+// Don't render if deal is expired
+if (dealExpiryDate && isDealExpired(dealExpiryDate)) {
+  return null;
+}
 
 function getDeckBadgeColor(status: string): string {
   const colors: Record<string, string> = {
@@ -181,6 +191,15 @@ const rarityClass = showDeal ? getRarityClass(dealDiscount) : "";
     </div>
 
     <div class="flex-1"></div>
+
+    {/* NEW: Expiration Badge - pokazuje się gdy deal ma expiry_date */}
+    {
+      dealExpiryDate && (
+        <div class="mb-3">
+          <ExpirationBadge expiryDate={dealExpiryDate} size="sm" />
+        </div>
+      )
+    }
 
     {
       showDeal && (

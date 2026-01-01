@@ -1,0 +1,109 @@
+---
+interface Props {
+  deal: any;
+  device?: string;
+}
+
+const { deal, device = "all" } = Astro.props;
+const game = deal.game_id || deal;
+
+// Format price
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(price);
+};
+
+// Get device status color
+const getStatusColor = (status?: string) => {
+  switch (status) {
+    case "excellent":
+      return "text-green-500";
+    case "playable":
+      return "text-yellow-500";
+    case "poor":
+      return "text-red-500";
+    default:
+      return "text-zinc-500";
+  }
+};
+
+// Get device status
+const devicePerf = device !== "all" && game.device_performance?.[device];
+const status = devicePerf?.status;
+---
+
+href={`/game/${game.slug}`}
+class="group block bg-zinc-900 rounded-lg overflow-hidden border border-zinc-800 hover:border-zinc-700
+transition-all hover:scale-[1.02]" >
+<!-- Game Cover -->
+<div class="aspect-[3/4] bg-zinc-800 relative overflow-hidden">
+  {
+    game.cover_image_url ? (
+      <img
+        src={game.cover_image_url}
+        alt={game.title}
+        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+        loading="lazy"
+      />
+    ) : (
+      <div class="w-full h-full flex items-center justify-center text-zinc-600 text-xs">
+        No image
+      </div>
+    )
+  }
+
+  <!-- Discount Badge -->
+  {
+    deal.discount_percent > 0 && (
+      <div class="absolute top-2 left-2 px-2 py-1 bg-red-600 text-white text-xs font-bold rounded">
+        -{deal.discount_percent}%
+      </div>
+    )
+  }
+
+  <!-- Device Status Badge -->
+  {
+    status && (
+      <div class="absolute top-2 right-2 px-2 py-1 bg-zinc-900/90 backdrop-blur-sm rounded text-xs font-semibold">
+        <span class={getStatusColor(status)}>
+          {status === "excellent" ? "✓" : status === "playable" ? "~" : "✗"}
+        </span>
+      </div>
+    )
+  }
+</div>
+
+<!-- Game Info -->
+<div class="p-3 space-y-2">
+  <!-- Title -->
+  <h3
+    class="font-semibold text-white text-sm line-clamp-2 group-hover:text-blue-400 transition-colors"
+  >
+    {game.title}
+  </h3>
+
+  <!-- Price -->
+  <div class="flex items-baseline gap-2">
+    <span class="text-lg font-bold text-green-500">
+      {formatPrice(deal.price)}
+    </span>
+    {
+      deal.normal_price > deal.price && (
+        <span class="text-sm text-zinc-500 line-through">
+          {formatPrice(deal.normal_price)}
+        </span>
+      )
+    }
+  </div>
+
+  <!-- Store -->
+  {
+    deal.store && (
+      <div class="text-xs text-zinc-400">
+        {deal.store.charAt(0).toUpperCase() + deal.store.slice(1)}
+      </div>
+    )
+  }
+</div>

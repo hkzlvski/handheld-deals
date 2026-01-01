@@ -3,6 +3,17 @@ import { directus, readItems, type Game, type Deal } from './directus';
 type DeviceType = 'all' | 'steam_deck' | 'rog_ally' | 'legion_go';
 
 /**
+ * Filter out expired deals
+ */
+function filterExpiredDeals(deals: any[]): any[] {
+  const now = new Date();
+  return deals.filter(deal => {
+    if (!deal.expiry_date) return true; // No expiry = always valid
+    return new Date(deal.expiry_date) > now;
+  });
+}
+
+/**
  * Get Deal of the Day (v3.0 - device-aware)
  * Priority: Editorial override > Highest discount with device compatibility
  */
@@ -17,12 +28,26 @@ export async function getDealOfTheDay(device: DeviceType = 'all') {
         } as any,
         sort: ['-discount_percent'],
         limit: 50,
-        fields: ['*', { game_id: ['*'] }] as any
+        fields: [
+          'id',
+          'game_id',
+          'store',
+          'price',
+          'normal_price',
+          'discount_percent',
+          'url',
+          'is_historical_low',
+          'expiry_date',
+          { game_id: ['*'] }
+        ] as any
       })
     );
 
+    // Filter out expired deals FIRST
+    const activeDeals = filterExpiredDeals(deals);
+
     // Filter by device compatibility
-    const compatibleDeals = deals.filter((d: any) => {
+    const compatibleDeals = activeDeals.filter((d: any) => {
       if (!d.game_id || !d.game_id.device_performance) return false;
 
       if (device === 'all') return true;
@@ -42,10 +67,47 @@ export async function getDealOfTheDay(device: DeviceType = 'all') {
       if (verifiedDeal) return verifiedDeal;
     }
 
-    return compatibleDeals[0] || deals[0] || null;
+    return compatibleDeals[0] || activeDeals[0] || null;
   } catch (error) {
     console.error('Error fetching Deal of the Day:', error);
     return null;
+  }
+}
+
+/**
+ * Get Weekly Gems (v3.0 - curator picks)
+ * Latest hand-tested game reviews
+ */
+export async function getWeeklyGems(limit: number = 5) {
+  try {
+    const picks: any = await directus.request(
+      readItems('curator_picks', {
+        filter: {
+          status: { _eq: 'published' }
+        } as any,
+        sort: ['-published_at'],
+        limit,
+        fields: [
+          '*',
+          {
+            game_id: [
+              'id',
+              'title',
+              'slug',
+              'cover_image_url',
+              'device_performance',
+              'deck_status',
+              'controller_support'
+            ]
+          }
+        ] as any
+      })
+    );
+
+    return picks || [];
+  } catch (error) {
+    console.error('Error fetching weekly gems:', error);
+    return [];
   }
 }
 
@@ -63,22 +125,36 @@ export async function getDeckVerifiedDeals(limit = 12, device: DeviceType = 'all
         } as any,
         sort: ['-discount_percent'],
         limit: 100,
-        fields: ['*', { game_id: ['*'] }] as any
+        fields: [
+          'id',
+          'game_id',
+          'store',
+          'price',
+          'normal_price',
+          'discount_percent',
+          'url',
+          'is_historical_low',
+          'expiry_date',
+          { game_id: ['*'] }
+        ] as any
       })
     );
+
+    // Filter out expired deals FIRST
+    const activeDeals = filterExpiredDeals(deals);
 
     let filtered;
 
     if (device === 'all') {
       // Show Deck verified/playable
-      filtered = deals.filter((d: any) =>
+      filtered = activeDeals.filter((d: any) =>
         d.game_id &&
         d.game_id.deck_status &&
         ['verified', 'playable'].includes(d.game_id.deck_status)
       );
     } else {
       // Show excellent performance on selected device
-      filtered = deals.filter((d: any) => {
+      filtered = activeDeals.filter((d: any) => {
         if (!d.game_id || !d.game_id.device_performance) return false;
         const devicePerf = d.game_id.device_performance[device];
         return devicePerf && devicePerf.status === 'excellent';
@@ -105,14 +181,28 @@ export async function getBatterySaverDeals(limit = 12, device: DeviceType = 'ste
         } as any,
         sort: ['-discount_percent'],
         limit: 100,
-        fields: ['*', { game_id: ['*'] }] as any
+        fields: [
+          'id',
+          'game_id',
+          'store',
+          'price',
+          'normal_price',
+          'discount_percent',
+          'url',
+          'is_historical_low',
+          'expiry_date',
+          { game_id: ['*'] }
+        ] as any
       })
     );
+
+    // Filter out expired deals FIRST
+    const activeDeals = filterExpiredDeals(deals);
 
     // Default to Steam Deck if 'all' selected
     const targetDevice = device === 'all' ? 'steam_deck' : device;
 
-    const batterySavers = deals.filter((d: any) => {
+    const batterySavers = activeDeals.filter((d: any) => {
       if (!d.game_id || !d.game_id.device_performance) return false;
 
       const devicePerf = d.game_id.device_performance[targetDevice];
@@ -141,16 +231,30 @@ export async function getTopDiscountDeals(limit = 12, device: DeviceType = 'all'
         } as any,
         sort: ['-discount_percent'],
         limit: 100,
-        fields: ['*', { game_id: ['*'] }] as any
+        fields: [
+          'id',
+          'game_id',
+          'store',
+          'price',
+          'normal_price',
+          'discount_percent',
+          'url',
+          'is_historical_low',
+          'expiry_date',
+          { game_id: ['*'] }
+        ] as any
       })
     );
 
+    // Filter out expired deals FIRST
+    const activeDeals = filterExpiredDeals(deals);
+
     if (device === 'all') {
-      return deals.slice(0, limit);
+      return activeDeals.slice(0, limit);
     }
 
     // Filter by device compatibility
-    const compatible = deals.filter((d: any) => {
+    const compatible = activeDeals.filter((d: any) => {
       if (!d.game_id || !d.game_id.device_performance) return true; // Include unknowns
 
       const devicePerf = d.game_id.device_performance[device];
@@ -175,7 +279,7 @@ export async function getMissionStats() {
     const [deals, games] = await Promise.all([
       directus.request(
         readItems('deals', {
-          fields: ['normal_price', 'price', 'expires_at'],
+          fields: ['normal_price', 'price', 'expiry_date'],
           limit: -1
         })
       ),
@@ -192,8 +296,8 @@ export async function getMissionStats() {
     weekAgo.setDate(weekAgo.getDate() - 7);
 
     const activeDeals = (deals as any[]).filter((d: any) => {
-      if (!d.expires_at) return true;
-      return new Date(d.expires_at) > today;
+      if (!d.expiry_date) return true;
+      return new Date(d.expiry_date) > today;
     }).length;
 
     const newVerified = (games as any[]).filter((g: any) =>
@@ -243,4 +347,103 @@ export function getDeviceStatus(
   if (!game.device_performance) return 'untested';
   const devicePerf = game.device_performance[device];
   return devicePerf?.status || 'untested';
+}
+
+/**
+ * Search games by title
+ * Device-aware: filters by compatibility status
+ */
+export async function searchGames(
+  query: string,
+  device: string = "all",
+  limit: number = 8
+): Promise<any[]> {
+  try {
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+
+    // Fetch all games matching search query
+    const games = await directus.request(
+      readItems("games", {
+        filter: {
+          title: {
+            _icontains: query.trim(),
+          },
+        },
+        fields: [
+          "id",
+          "title",
+          "slug",
+          "cover_image_url",
+          "device_performance",
+          "deck_status",
+          "protondb_tier",
+        ],
+        limit: 50, // Fetch more, filter in JS
+        sort: ["title"],
+      })
+    );
+
+    // Get best deal for each game
+    const gamesWithDeals = await Promise.all(
+      games.map(async (game: any) => {
+        const deals = await directus.request(
+          readItems("deals", {
+            filter: {
+              game_id: { _eq: game.id },
+            },
+            sort: ["price"],
+            limit: 1,
+          })
+        );
+
+        const bestDeal = deals?.[0] || null;
+
+        return {
+          ...game,
+          best_deal: bestDeal,
+        };
+      })
+    );
+
+    // Filter by device compatibility (client-side)
+    let filtered = gamesWithDeals;
+
+    if (device !== "all") {
+      filtered = gamesWithDeals.filter((game: any) => {
+        const perf = game.device_performance?.[device];
+        const status = perf?.status;
+        // Include excellent and playable, exclude poor and untested
+        return status === "excellent" || status === "playable";
+      });
+    }
+
+    // Sort by relevance (exact match first, then alphabetical)
+    const queryLower = query.toLowerCase();
+    filtered.sort((a: any, b: any) => {
+      const aTitle = a.title.toLowerCase();
+      const bTitle = b.title.toLowerCase();
+
+      // Exact match first
+      const aExact = aTitle === queryLower;
+      const bExact = bTitle === queryLower;
+      if (aExact && !bExact) return -1;
+      if (!aExact && bExact) return 1;
+
+      // Starts with query
+      const aStarts = aTitle.startsWith(queryLower);
+      const bStarts = bTitle.startsWith(queryLower);
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+
+      // Alphabetical
+      return aTitle.localeCompare(bTitle);
+    });
+
+    return filtered.slice(0, limit);
+  } catch (error) {
+    console.error("Error searching games:", error);
+    return [];
+  }
 }

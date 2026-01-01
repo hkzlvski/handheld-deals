@@ -1,0 +1,237 @@
+---
+import Badge from "./Badge.astro";
+import { getDeviceName } from "../lib/helpers";
+
+type Verdict = "buy" | "wait" | "skip";
+type Priority = "featured" | "normal" | "secondary";
+
+interface Props {
+  pick: any;
+  device?: string;
+  priority?: Priority;
+}
+
+const { pick, device = "steam_deck", priority = "normal" } = Astro.props;
+const game = pick.game_id;
+const deviceName = getDeviceName(device);
+
+// Get device-specific performance
+const perf = game.device_performance?.[device];
+
+// Normalize verdict safely
+const verdict = (pick.verdict ?? "wait") as Verdict;
+
+// Dynamic card width based on priority
+const cardWidths = {
+  featured: "w-[320px]", // High confidence - larger
+  normal: "w-[280px]", // Medium confidence - standard
+  secondary: "w-[240px]", // Low confidence - smaller
+};
+
+const cardWidth = cardWidths[priority];
+
+// Score color
+function getScoreColor(score: number) {
+  if (score >= 90) return "text-yellow-400"; // Legendary
+  if (score >= 80) return "text-green-400"; // Great
+  if (score >= 70) return "text-blue-400"; // Good
+  return "text-zinc-400"; // Meh
+}
+
+// Verdict variant for Badge component
+function getVerdictVariant(v: Verdict): "excellent" | "playable" | "poor" {
+  if (v === "buy") return "excellent";
+  if (v === "skip") return "poor";
+  return "playable"; // wait
+}
+---
+
+<article
+  class={`flex-shrink-0 ${cardWidth} group cursor-pointer transition-all duration-300 ${
+    priority === "secondary" ? "opacity-80 hover:opacity-100" : ""
+  }`}
+  data-game-id={game.id}
+  data-priority={priority}
+>
+  <a href={`/game/${game.slug}`} class="block">
+    <!-- Cover -->
+    <div class="relative mb-3">
+      <div
+        class={`aspect-[3/4] rounded-lg overflow-hidden bg-zinc-800 shadow-lg ${
+          priority === "featured"
+            ? "ring-2 ring-yellow-500/50 shadow-yellow-500/20"
+            : ""
+        }`}
+      >
+        {
+          game.cover_image_url ? (
+            <img
+              src={game.cover_image_url}
+              alt={game.title}
+              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          ) : (
+            <div class="w-full h-full flex items-center justify-center text-5xl">
+              🎮
+            </div>
+          )
+        }
+
+        <!-- Hand-Tested Badge -->
+        <div class="absolute top-2 left-2 flex flex-col gap-1">
+          <Badge variant="hand_tested" size="sm" />
+          {
+            priority === "featured" && (
+              <Badge variant="featured" size="sm">
+                ⭐ Featured
+              </Badge>
+            )
+          }
+        </div>
+
+        <!-- Score Badge with Device Indicator -->
+        <div class="absolute top-2 right-2 flex flex-col items-center gap-1">
+          {/* Device tested on indicator */}
+          <span
+            class="text-xs opacity-70 hover:opacity-100 transition-opacity"
+            title={`Tested on ${
+              pick.tested_on === "deck"
+                ? "Steam Deck"
+                : pick.tested_on === "ally"
+                  ? "ROG Ally"
+                  : "Legion Go"
+            }`}
+          >
+            {
+              pick.tested_on === "deck"
+                ? "🎮"
+                : pick.tested_on === "ally"
+                  ? "🎮"
+                  : "🎮"
+            }
+          </span>
+
+          {/* Score circle */}
+          <div
+            class="w-12 h-12 rounded-full bg-zinc-900/90 backdrop-blur-sm border-2 border-zinc-700 flex items-center justify-center shadow-lg"
+          >
+            <span class={`text-lg font-black ${getScoreColor(pick.score)}`}>
+              {pick.score}
+            </span>
+          </div>
+        </div>
+
+        <!-- Verdict Badge -->
+        <div class="absolute bottom-2 right-2">
+          {
+            verdict === "buy" && (
+              <span class="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-bold uppercase shadow-lg">
+                BUY
+              </span>
+            )
+          }
+          {
+            verdict === "wait" && (
+              <span class="px-3 py-1.5 bg-yellow-600 text-black rounded-lg text-xs font-bold uppercase shadow-lg">
+                WAIT
+              </span>
+            )
+          }
+          {
+            verdict === "skip" && (
+              <span class="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-bold uppercase shadow-lg">
+                SKIP
+              </span>
+            )
+          }
+        </div>
+      </div>
+
+      <!-- Hover overlay with quick stats -->
+      <div
+        class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4"
+      >
+        {
+          perf && (
+            <div class="space-y-1 text-xs text-white">
+              {perf.fps_avg && (
+                <div class="flex items-center gap-2">
+                  <span class="text-zinc-400">⚡</span>
+                  <span class="font-semibold">{perf.fps_avg} FPS</span>
+                </div>
+              )}
+              {perf.battery_hours && (
+                <div class="flex items-center gap-2">
+                  <span class="text-zinc-400">🔋</span>
+                  <span class="font-semibold">
+                    {perf.battery_hours}h battery
+                  </span>
+                </div>
+              )}
+              {perf.status && (
+                <div class="flex items-center gap-2">
+                  <span class="text-zinc-400">📊</span>
+                  <span class="font-semibold capitalize">{perf.status}</span>
+                </div>
+              )}
+            </div>
+          )
+        }
+      </div>
+    </div>
+
+    <!-- Info -->
+    <div class="space-y-2">
+      <h3
+        class={`font-bold text-white leading-tight group-hover:text-blue-400 transition-colors line-clamp-2 ${
+          priority === "featured" ? "text-base" : "text-sm"
+        }`}
+      >
+        {game.title}
+      </h3>
+
+      <p
+        class={`text-zinc-400 line-clamp-2 ${
+          priority === "featured" ? "text-sm" : "text-xs"
+        }`}
+      >
+        {pick.curator_note}
+      </p>
+
+      <!-- Device + Confidence -->
+      <div class="space-y-1.5">
+        <div class="flex items-center gap-2 text-xs">
+          <span class="text-zinc-500">
+            Tested on {
+              pick.tested_on === "deck"
+                ? "Deck"
+                : pick.tested_on === "ally"
+                  ? "Ally"
+                  : "Legion"
+            }
+          </span>
+
+          {
+            pick.confidence_level && pick.confidence_level !== "high" && (
+              <Badge variant="needs_retest" size="xs">
+                {pick.confidence_level === "medium" ? "Preliminary" : "Limited"}
+              </Badge>
+            )
+          }
+        </div>
+
+        {/* Device Mismatch Warning */}
+        {
+          pick.tested_on !== device && (
+            <div class="flex items-start gap-1.5 text-xs text-yellow-500/90">
+              <span class="text-[10px] mt-0.5">⚠️</span>
+              <span class="leading-tight">
+                Performance on your {deviceName} may vary
+              </span>
+            </div>
+          )
+        }
+      </div>
+    </div>
+  </a>
+</article>

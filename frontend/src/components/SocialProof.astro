@@ -1,0 +1,59 @@
+---
+interface Props {
+  device?: string;
+}
+
+const { device = "all" } = Astro.props;
+
+// Device-specific messaging
+const deviceNames: Record<string, string> = {
+  all: "handheld gamers",
+  steam_deck: "Steam Deck owners",
+  rog_ally: "ROG Ally owners",
+  legion_go: "Legion Go owners",
+};
+
+const deviceName = deviceNames[device] || deviceNames.all;
+
+// Mock stats (replace with real data later)
+const stats = {
+  users: 1247,
+  gamesTested: 30,
+  avgRating: 4.8,
+};
+---
+
+<section class="py-8 border-y border-zinc-800">
+  <div class="container mx-auto px-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+      <!-- Stat 1: Trusted Users -->
+      <div class="space-y-2">
+        <div class="text-4xl md:text-5xl font-black text-white">
+          {stats.users.toLocaleString()}
+        </div>
+        <div class="text-zinc-400 text-sm md:text-base">
+          {deviceName} trust us
+        </div>
+      </div>
+
+      <!-- Stat 2: Games Tested -->
+      <div class="space-y-2">
+        <div class="text-4xl md:text-5xl font-black text-white">
+          {stats.gamesTested}+
+        </div>
+        <div class="text-zinc-400 text-sm md:text-base">games hand-tested</div>
+      </div>
+
+      <!-- Stat 3: Average Rating -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-center gap-2">
+          <span class="text-4xl md:text-5xl font-black text-white">
+            {stats.avgRating}
+          </span>
+          <span class="text-yellow-400 text-2xl">★</span>
+        </div>
+        <div class="text-zinc-400 text-sm md:text-base">average rating</div>
+      </div>
+    </div>
+  </div>
+</section>

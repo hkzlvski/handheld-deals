@@ -1,0 +1,79 @@
+---
+import { getDeviceName } from "../lib/helpers";
+
+interface Props {
+  device: string;
+}
+
+const { device } = Astro.props;
+const deviceName = getDeviceName(device);
+const isSpecificDevice = device !== "all";
+
+// Device-specific gradients
+const gradientClass =
+  device === "steam_deck"
+    ? "gradient-deck-hero"
+    : device === "rog_ally"
+      ? "gradient-ally-hero"
+      : device === "legion_go"
+        ? "gradient-legion-hero"
+        : "bg-gradient-to-b from-zinc-900 to-zinc-950";
+---
+
+<section
+  class={`${gradientClass} gradient-animated border-b border-zinc-800/50 relative pb-4`}
+>
+  <div class="container mx-auto px-4 py-6 md:py-8">
+    <!-- Headline -->
+    <h1
+      class="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 text-center leading-tight"
+    >
+      {
+        isSpecificDevice ? (
+          <>
+            Hand-Tested Deals for{" "}
+            <span class="text-blue-400">{deviceName}</span>
+          </>
+        ) : (
+          <>
+            Hand-Tested Deals for Your Handheld
+            <span class="block text-lg md:text-xl text-zinc-400 font-normal mt-2">
+              Steam Deck • ROG Ally • Legion Go
+            </span>
+          </>
+        )
+      }
+    </h1>
+
+    <!-- Subheadline -->
+    <p
+      class="text-base md:text-lg text-zinc-300 text-center max-w-2xl mx-auto mb-5"
+    >
+      We tell you if it's worth buying on your device.
+    </p>
+
+    <!-- Secondary CTA -->
+    <div class="flex justify-center">
+      <a
+        href="#deal-of-the-day"
+        class="inline-flex items-center gap-2 px-5 py-2.5
+          border-2 border-blue-500/50 hover:border-blue-500 text-blue-400
+          hover:text-blue-300 font-medium rounded-lg transition-all"
+      >
+        See Today&apos;s Deal
+        <svg
+          class="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+        </svg>
+      </a>
+    </div>
+  </div>
+</section>

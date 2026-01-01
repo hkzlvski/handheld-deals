@@ -1,0 +1,145 @@
+---
+interface Props {
+  device?: string;
+}
+
+const { device = "all" } = Astro.props;
+
+// Device-specific copy
+const deviceCopy: Record<string, { headline: string; subheadline: string }> = {
+  all: {
+    headline: "Weekly Handheld Gems",
+    subheadline: "Hand-tested games delivered every Wednesday",
+  },
+  steam_deck: {
+    headline: "Weekly Steam Deck Picks",
+    subheadline: "5 hand-tested Deck games every Wednesday",
+  },
+  rog_ally: {
+    headline: "Weekly ROG Ally Picks",
+    subheadline: "5 hand-tested Ally games every Wednesday",
+  },
+  legion_go: {
+    headline: "Weekly Legion Go Picks",
+    subheadline: "5 hand-tested Legion Go games every Wednesday",
+  },
+};
+
+const copy = deviceCopy[device] || deviceCopy.all;
+---
+
+<section
+  class="py-16 bg-gradient-to-b from-zinc-900 to-zinc-950 border-y border-zinc-800"
+>
+  <div class="container mx-auto px-4">
+    <div class="max-w-2xl mx-auto text-center">
+      <!-- Icon -->
+      <div class="mb-6 flex justify-center">
+        <div
+          class="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center"
+        >
+          <svg
+            class="w-8 h-8 text-blue-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+            ></path>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Headline -->
+      <h2 class="text-3xl md:text-4xl font-black text-white mb-3">
+        {copy.headline}
+      </h2>
+
+      <!-- Subheadline -->
+      <p class="text-lg text-zinc-400 mb-8">
+        {copy.subheadline} · Zero spam, just gems
+      </p>
+
+      <!-- Form -->
+      <form
+        class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto"
+        id="newsletter-form"
+      >
+        <input
+          type="email"
+          name="email"
+          placeholder="your@email.com"
+          required
+          class="flex-1 px-4 py-3 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+
+        <button
+          type="submit"
+          class="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors"
+        >
+          Subscribe Free
+        </button>
+      </form>
+
+      <!-- Trust signals -->
+      <div
+        class="mt-6 flex items-center justify-center gap-6 text-sm text-zinc-500"
+      >
+        <div class="flex items-center gap-1">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fill-rule="evenodd"
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+              clip-rule="evenodd"></path>
+          </svg>
+          <span>No spam</span>
+        </div>
+
+        <div class="flex items-center gap-1">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fill-rule="evenodd"
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+              clip-rule="evenodd"></path>
+          </svg>
+          <span>Unsubscribe anytime</span>
+        </div>
+
+        <div class="flex items-center gap-1">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fill-rule="evenodd"
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+              clip-rule="evenodd"></path>
+          </svg>
+          <span>1,200+ subscribers</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Simple form handling (replace with real API later)
+  const form = document.getElementById("newsletter-form");
+
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(form as HTMLFormElement);
+      const email = formData.get("email");
+
+      // TODO: Send to ConvertKit or email service
+      console.log("Newsletter signup:", email);
+
+      // Show success message
+      alert("Thanks for subscribing! Check your email to confirm.");
+      (form as HTMLFormElement).reset();
+    });
+  }
+</script>

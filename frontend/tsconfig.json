@@ -3,7 +3,16 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
-    }
+      "@/*": [
+        "src/*"
+      ]
+    },
+    // React configuration
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    // Type checking
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true
   }
 }

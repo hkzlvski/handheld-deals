@@ -1,0 +1,184 @@
+---
+/**
+ * Badge Component v3.0
+ * Unified badge system for Handheld Deals
+ *
+ * Uses project's zinc-based dark theme with /50 opacity backgrounds
+ */
+
+export interface Props {
+  variant: // Deck status
+    | "verified"
+    | "playable"
+    | "unsupported"
+    | "unknown"
+    // ProtonDB
+    | "platinum"
+    | "gold"
+    | "silver"
+    | "bronze"
+    | "borked"
+    // Device performance (v3.0)
+    | "excellent"
+    | "good"
+    | "poor"
+    | "untested"
+    | "estimated"
+    // Warnings
+    | "launcher"
+    | "online"
+    | "small_text"
+    | "anti_cheat"
+    // Features
+    | "controller"
+    | "battery_high"
+    | "battery_low"
+    // Deal status
+    | "discount"
+    | "discount_large"
+    | "historical_low"
+    | "featured"
+    // Timer urgency
+    | "timer_low"
+    | "timer_medium"
+    | "timer_high"
+    | "timer_critical"
+    // Data reliability
+    | "hand_tested"
+    | "community"
+    | "needs_retest";
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  icon?: string;
+  responsive?: boolean; // Hide text on mobile
+}
+
+const { variant, size = "xs", icon, responsive = false } = Astro.props;
+
+// Color classes matching global.css and helpers.ts
+const variantClasses: Record<string, string> = {
+  // Deck status (from global.css)
+  verified: "bg-green-900/50 text-green-400 border border-green-800",
+  playable: "bg-yellow-900/50 text-yellow-400 border border-yellow-800",
+  unsupported: "bg-red-900/50 text-red-400 border border-red-800",
+  unknown: "bg-zinc-800 text-zinc-400 border border-zinc-700",
+
+  // ProtonDB (from helpers.ts)
+  platinum: "bg-purple-900/50 text-purple-400 border border-purple-800",
+  gold: "bg-yellow-900/50 text-yellow-400 border border-yellow-800",
+  silver: "bg-zinc-700/50 text-zinc-300 border border-zinc-600",
+  bronze: "bg-orange-900/50 text-orange-400 border border-orange-800",
+  borked: "bg-red-900/50 text-red-400 border border-red-800",
+
+  // Device performance (from helpers.ts)
+  excellent: "bg-green-900/50 text-green-400 border border-green-800",
+  good: "bg-blue-900/50 text-blue-400 border border-blue-800",
+  poor: "bg-orange-900/50 text-orange-400 border border-orange-800",
+  untested: "bg-zinc-800 text-zinc-400 border border-zinc-700",
+  estimated: "bg-purple-900/50 text-purple-400 border border-purple-800",
+
+  // Warnings (from GameCard.astro)
+  launcher: "bg-yellow-900/50 text-yellow-400 border border-yellow-800",
+  online: "bg-red-900/50 text-red-400 border border-red-800",
+  small_text: "bg-orange-900/50 text-orange-400 border border-orange-800",
+  anti_cheat: "bg-red-900/50 text-red-400 border border-red-800",
+
+  // Features
+  controller: "bg-blue-900/50 text-blue-400 border border-blue-800",
+  battery_high: "bg-green-900/50 text-green-400 border border-green-800",
+  battery_low: "bg-red-900/50 text-red-400 border border-red-800",
+
+  // Deal status
+  discount: "bg-green-900/50 text-green-400",
+  discount_large: "bg-red-600 text-white shadow-2xl",
+  historical_low: "bg-green-600 text-white shadow-lg",
+  featured:
+    "bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold shadow-lg",
+
+  // Timer urgency
+  timer_low: "bg-orange-600/20 text-orange-400 border border-orange-600/50",
+  timer_medium: "bg-red-600/20 text-red-400 border border-red-600/50",
+  timer_high: "bg-red-600/30 text-red-300 border border-red-500 animate-pulse",
+  timer_critical: "bg-red-600 text-white animate-pulse",
+
+  // Data reliability
+  hand_tested: "bg-green-900/50 text-green-400 border border-green-800",
+  community: "bg-blue-900/50 text-blue-400 border border-blue-800",
+  needs_retest: "bg-yellow-900/50 text-yellow-400 border border-yellow-800",
+};
+
+// Size classes matching global.css .badge
+const sizeClasses: Record<string, string> = {
+  xs: "px-2 py-0.5 text-xs",
+  sm: "px-2.5 py-1 text-sm",
+  md: "px-3 py-1.5 text-sm",
+  lg: "px-4 py-2 text-base font-bold",
+  xl: "px-3 py-2 text-2xl font-black",
+};
+
+// Default labels
+const labels: Record<string, { full: string; short: string }> = {
+  verified: { full: "Verified", short: "✓" },
+  playable: { full: "Playable", short: "⚠" },
+  unsupported: { full: "Unsupported", short: "✗" },
+  unknown: { full: "Unknown", short: "?" },
+
+  platinum: { full: "Platinum", short: "Pt" },
+  gold: { full: "Gold", short: "Au" },
+  silver: { full: "Silver", short: "Ag" },
+  bronze: { full: "Bronze", short: "Bz" },
+  borked: { full: "Borked", short: "✗" },
+
+  excellent: { full: "Excellent", short: "✓" },
+  good: { full: "Good", short: "✓" },
+  poor: { full: "Poor", short: "⚠" },
+  untested: { full: "Untested", short: "?" },
+  estimated: { full: "Estimated", short: "~" },
+
+  launcher: { full: "Launcher", short: "⚠️" },
+  online: { full: "Online", short: "🌐" },
+  small_text: { full: "Small Text", short: "⚠️" },
+  anti_cheat: { full: "Anti-cheat", short: "⚠️" },
+
+  controller: { full: "Full Controller", short: "🎮" },
+  battery_high: { full: "Great Battery", short: "🔋" },
+  battery_low: { full: "Power Hungry", short: "⚡" },
+
+  discount: { full: "Save", short: "" },
+  historical_low: { full: "Historical Low", short: "💎" },
+
+  hand_tested: { full: "Hand Tested", short: "✓" },
+  community: { full: "Community", short: "👥" },
+  needs_retest: { full: "Needs Retest", short: "⚠️" },
+};
+
+const colorClass = variantClasses[variant] || variantClasses.unknown;
+const sizeClass = sizeClasses[size];
+const label = labels[variant];
+
+// Custom content or default label
+const hasCustomContent = Astro.slots.has("default");
+---
+
+<span
+  class:list={[
+    "badge inline-flex items-center gap-1 rounded-full font-medium",
+    colorClass,
+    sizeClass,
+  ]}
+  data-variant={variant}
+>
+  {icon && <span>{icon}</span>}
+
+  {
+    !hasCustomContent && responsive && (
+      <>
+        <span class="inline md:hidden">{label.short}</span>
+        <span class="hidden md:inline">{label.full}</span>
+      </>
+    )
+  }
+
+  {!hasCustomContent && !responsive && <span>{label.full}</span>}
+
+  {hasCustomContent && <slot />}
+</span>
